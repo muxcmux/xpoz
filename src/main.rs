@@ -1,48 +1,123 @@
 mod expect;
 mod settings;
+mod errors;
 
-use actix_web::{get, App, HttpResponse, HttpServer, Responder, middleware::Logger };
+use anyhow::Result;
+use actix_web::{dev, web, get, http, App, Error, HttpServer, HttpResponse, Result as AWResult};
+use actix_web::middleware::{Logger, errhandlers::{ErrorHandlers, ErrorHandlerResponse}};
 use std::env::args;
 use settings::Settings;
 use expect::*;
-
-const DEFAULT_SETTINGS_FILE: &str = "settings.yml";
+use errors::*;
+use sqlx::{query, sqlite::SqlitePool};
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let config_file = args().nth(1).unwrap_or_else(|| { DEFAULT_SETTINGS_FILE.to_string() });
+async fn main() -> Result<()> {
+    dotenv::dotenv().ok();
+    env_logger::init();
 
-    pretty_env_logger::init();
+    let cfg = configure().await;
+    run(cfg.0, cfg.1).await?;
 
-    run(&config_file).await
+    Ok(())
 }
 
-async fn run(config_file: &str) -> std::io::Result<()> {
-    let settings = Settings::from_file(config_file).expect_or_exit("Config error");
-    log::debug!("{:?}", settings);
+fn handle_404s<T>(mut _res: dev::ServiceResponse<T>) -> AWResult<ErrorHandlerResponse<T>> {
+    Err(Error::from(APIError::NotFound))
+}
 
-    HttpServer::new(|| {
+async fn configure() -> (Settings, SqlitePool) {
+    let config_file = args().nth(1)
+        .unwrap_or_else(|| { Settings::default_file().to_string() });
+    let settings = Settings::from_file(&config_file).expect_or_exit("Config error");
+    log::debug!("{:?}", settings);
+    let pool = SqlitePool::new(&format!("sqlite://{}", settings.photos.database))
+        .await.expect_or_exit("Can't open photos database");
+    (settings, pool)
+}
+
+async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
+    let address = settings.server.address.clone();
+    HttpServer::new(move || {
         App::new()
+            .data(settings.clone())
+            .data(pool.clone())
             .wrap(Logger::default())
-            .service(index)
-            .service(hello)
+            .wrap(ErrorHandlers::new().handler(http::StatusCode::NOT_FOUND, handle_404s)) .service(index)
+            .service(show)
     })
-    .bind(settings.server.bind_address)?
+    .bind(address)?
     .run()
-    .await
+    .await?;
+
+    Ok(())
+}
+
+
+
+
+
+
+
+
+
+
+
+
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+struct Entity {
+    id: Option<i32>,
+    name: Option<String>,
+    parent_id: Option<i32>
 }
 
 #[get("/")]
-async fn index() -> impl Responder {
-    let environment = std::env::vars_os()
-        .map(|s| format!("{}={}", s.0.into_string().unwrap(), s.1.into_string().unwrap()))
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    HttpResponse::Ok().body(environment)
+async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, APIError> {
+    let entities = get_entities(pool.get_ref()).await?;
+    if entities.is_empty() {
+        Ok(HttpResponse::NoContent().finish())
+    } else {
+        Ok(HttpResponse::Ok().json(entities))
+    }
 }
 
-#[get("/hello")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hey, whas up?")
+#[get("/entities/{id}")]
+async fn show(_pool: web::Data<SqlitePool>, id: web::Path<i32>) -> Result<HttpResponse, APIError> {
+    Ok(HttpResponse::Ok().json(Entity {
+        id: Some(id.into_inner()),
+        name: Some("Hello".into()),
+        parent_id: None
+    }))
+}
+
+async fn create_entity(pool: web::Data<SqlitePool>) -> Result<HttpResponse> {
+    Ok(HttpResponse::Created().json(Entity {
+        id: Some(123),
+        name: Some("This is an entity that was just created".into()),
+        parent_id: None
+    }))
+}
+
+// async fn get_entity(pool: &SqlitePool, id: usize) -> Result<Entity> {
+//     let records = query!
+// }
+
+async fn get_entities(pool: &SqlitePool) -> Result<Vec<Entity>> {
+    let mut entities = vec![];
+
+    let records = query!("SELECT * FROM Z_PRIMARYKEY")
+        .fetch_all(pool)
+        .await?;
+
+    for r in records {
+        entities.push(Entity {
+            id: r.Z_ENT,
+            name: r.Z_NAME,
+            parent_id: r.Z_SUPER
+        });
+    }
+
+    Ok(entities)
 }

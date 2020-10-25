@@ -2,17 +2,18 @@ use config::{ConfigError, Config, File, Environment};
 use serde::Deserialize;
 use crate::expect::ExpectOrExit;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Server {
-    pub bind_address: String,
+    pub address: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Photos {
-    pub library_dir: String
+    pub library: String,
+    pub database: String
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Settings {
     pub photos: Photos,
     pub server: Server
@@ -20,8 +21,9 @@ pub struct Settings {
 
 fn set_defaults(config: &mut Config) {
     let defaults = [
-        ["server.bind_address", "127.0.0.1:1234"],
-        ["photos.library_dir", "~/Pictures/Photos Library.photoslibrary"]
+        ["server.address", "127.0.0.1:1234"],
+        ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
+        ["photos.database", "test.sqlite"]
     ];
 
     for s in defaults.iter() {
@@ -37,4 +39,6 @@ impl Settings {
         config.merge(Environment::with_prefix("xpoz").separator("__"))?;
         config.try_into()
     }
+
+    pub fn default_file() -> &'static str { "settings.yml" }
 }
