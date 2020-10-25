@@ -4,7 +4,7 @@ mod errors;
 
 use anyhow::Result;
 use actix_web::{dev, web, get, http, App, Error, HttpServer, HttpResponse, Result as AWResult};
-use actix_web::middleware::{Logger, errhandlers::{ErrorHandlers, ErrorHandlerResponse}};
+use actix_web::middleware::{Compress, Logger, errhandlers::{ErrorHandlers, ErrorHandlerResponse}};
 use std::env::args;
 use settings::Settings;
 use expect::*;
@@ -43,6 +43,7 @@ async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
             .data(settings.clone())
             .data(pool.clone())
             .wrap(Logger::default())
+            .wrap(Compress::default())
             .wrap(ErrorHandlers::new().handler(http::StatusCode::NOT_FOUND, handle_404s)) .service(index)
             .service(show)
     })
