@@ -15,4 +15,6 @@ dotenv = "0.15"
 config = "0.10"
 thiserror = "1"
 anyhow = "1"
+async-graphql = "2"
+async-graphql-actix-web = "2"
 sqlx = { version = "0.3", default-features = true, features = ["sqlite"] }

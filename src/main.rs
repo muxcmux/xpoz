@@ -3,7 +3,7 @@ mod settings;
 mod errors;
 
 use anyhow::Result;
-use actix_web::{dev, web, get, http, App, Error, HttpServer, HttpResponse, Result as AWResult};
+use actix_web::{dev, web, post, get, http, App, Error, HttpServer, HttpResponse, Result as AWResult};
 use actix_web::middleware::{Compress, Logger, errhandlers::{ErrorHandlers, ErrorHandlerResponse}};
 use std::env::args;
 use settings::Settings;
@@ -36,16 +36,57 @@ async fn configure() -> (Settings, SqlitePool) {
     (settings, pool)
 }
 
+
+
+
+
+
+
+use async_graphql::{EmptyMutation, EmptySubscription, Schema, Object};
+use async_graphql_actix_web::{Request, Response};
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+
+type MySchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
+
+struct QueryRoot;
+
+#[Object]
+impl QueryRoot {
+    async fn add(&self, a: i32, b: i32) -> i32 {
+        a + b
+    }
+}
+
+#[post("/graphql")]
+async fn graphql(schema: web::Data<MySchema>, req: Request) -> Response {
+    schema.execute(req.into_inner()).await.into()
+}
+
+#[get("/graphql")]
+async fn index_playground() -> AWResult<HttpResponse> {
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(playground_source(
+            GraphQLPlaygroundConfig::new("/graphql").subscription_endpoint("/graphql"),
+        )))
+}
+
+
+
 async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
     let address = settings.server.address.clone();
+    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription).finish();
     HttpServer::new(move || {
         App::new()
             .data(settings.clone())
             .data(pool.clone())
+            .data(schema.clone())
             .wrap(Logger::default())
             .wrap(Compress::default())
             .wrap(ErrorHandlers::new().handler(http::StatusCode::NOT_FOUND, handle_404s)) .service(index)
             .service(show)
+            .service(graphql)
+            .service(index_playground)
     })
     .bind(address)?
     .run()
@@ -53,7 +94,6 @@ async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
 
     Ok(())
 }
-
 
 
 
