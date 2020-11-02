@@ -12,11 +12,14 @@ impl Entity {
     async fn id(&self) -> &Option<i32> { &self.id }
     async fn name(&self) -> &Option<String> { &self.name }
     async fn parent_id(&self) -> &Option<i32> { &self.parent_id }
-    // async fn parent(&self, ctx: &Context<'_>) -> &Option<Self> {
-    //     &self.parent_id.map(|v| {
-    //         if v == 0 { return None }
-    //     })
-    // }
+    async fn parent(&self, ctx: &Context<'_>) -> Result<Option<Self>> {
+        let pid = match self.parent_id {
+            Some(v) => entity(ctx, v).await?,
+            None => None
+        };
+
+        Ok(pid)
+    }
 }
 
 pub async fn entities(ctx: &Context<'_>) -> Result<Vec<Entity>> {
