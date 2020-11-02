@@ -1,15 +1,19 @@
 mod expect;
 mod settings;
-mod errors;
+mod db;
 
 use anyhow::Result;
-use actix_web::{dev, web, post, get, http, App, Error, HttpServer, HttpResponse, Result as AWResult};
-use actix_web::middleware::{Compress, Logger, errhandlers::{ErrorHandlers, ErrorHandlerResponse}};
+use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult};
+use actix_web::middleware::{Compress, Logger};
 use std::env::args;
 use settings::Settings;
 use expect::*;
-use errors::*;
-use sqlx::{query, sqlite::SqlitePool};
+use sqlx::sqlite::SqlitePool;
+use async_graphql::{Schema as AGSchema, EmptyMutation, EmptySubscription};
+use async_graphql_actix_web::{Request, Response};
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+use db::{Schema, QueryRoot};
+
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -20,10 +24,6 @@ async fn main() -> Result<()> {
     run(cfg.0, cfg.1).await?;
 
     Ok(())
-}
-
-fn handle_404s<T>(mut _res: dev::ServiceResponse<T>) -> AWResult<ErrorHandlerResponse<T>> {
-    Err(Error::from(APIError::NotFound))
 }
 
 async fn configure() -> (Settings, SqlitePool) {
@@ -37,45 +37,25 @@ async fn configure() -> (Settings, SqlitePool) {
 }
 
 
-
-
-
-
-
-use async_graphql::{EmptyMutation, EmptySubscription, Schema, Object};
-use async_graphql_actix_web::{Request, Response};
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-
-type MySchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
-
-struct QueryRoot;
-
-#[Object]
-impl QueryRoot {
-    async fn add(&self, a: i32, b: i32) -> i32 {
-        a + b
-    }
-}
-
-#[post("/graphql")]
-async fn graphql(schema: web::Data<MySchema>, req: Request) -> Response {
+#[post("/api")]
+async fn api(schema: web::Data<Schema>, req: Request) -> Response {
     schema.execute(req.into_inner()).await.into()
 }
 
-#[get("/graphql")]
-async fn index_playground() -> AWResult<HttpResponse> {
+#[get("/api")]
+async fn graphiql() -> AWResult<HttpResponse> {
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(playground_source(
-            GraphQLPlaygroundConfig::new("/graphql").subscription_endpoint("/graphql"),
+            GraphQLPlaygroundConfig::new("/api").subscription_endpoint("/api"),
         )))
 }
 
-
-
 async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
     let address = settings.server.address.clone();
-    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription).finish();
+    let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
+        .data(pool.clone())
+        .finish();
     HttpServer::new(move || {
         App::new()
             .data(settings.clone())
@@ -83,10 +63,8 @@ async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
             .data(schema.clone())
             .wrap(Logger::default())
             .wrap(Compress::default())
-            .wrap(ErrorHandlers::new().handler(http::StatusCode::NOT_FOUND, handle_404s)) .service(index)
-            .service(show)
-            .service(graphql)
-            .service(index_playground)
+            .service(api)
+            .service(graphiql)
     })
     .bind(address)?
     .run()
@@ -95,70 +73,3 @@ async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
     Ok(())
 }
 
-
-
-
-
-
-
-
-
-
-
-use serde::Serialize;
-
-#[derive(Debug, Serialize)]
-struct Entity {
-    id: Option<i32>,
-    name: Option<String>,
-    parent_id: Option<i32>
-}
-
-#[get("/")]
-async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, APIError> {
-    let entities = get_entities(pool.get_ref()).await?;
-    if entities.is_empty() {
-        Ok(HttpResponse::NoContent().finish())
-    } else {
-        Ok(HttpResponse::Ok().json(entities))
-    }
-}
-
-#[get("/entities/{id}")]
-async fn show(_pool: web::Data<SqlitePool>, id: web::Path<i32>) -> Result<HttpResponse, APIError> {
-    Ok(HttpResponse::Ok().json(Entity {
-        id: Some(id.into_inner()),
-        name: Some("Hello".into()),
-        parent_id: None
-    }))
-}
-
-async fn create_entity(pool: web::Data<SqlitePool>) -> Result<HttpResponse> {
-    Ok(HttpResponse::Created().json(Entity {
-        id: Some(123),
-        name: Some("This is an entity that was just created".into()),
-        parent_id: None
-    }))
-}
-
-// async fn get_entity(pool: &SqlitePool, id: usize) -> Result<Entity> {
-//     let records = query!
-// }
-
-async fn get_entities(pool: &SqlitePool) -> Result<Vec<Entity>> {
-    let mut entities = vec![];
-
-    let records = query!("SELECT * FROM Z_PRIMARYKEY")
-        .fetch_all(pool)
-        .await?;
-
-    for r in records {
-        entities.push(Entity {
-            id: r.Z_ENT,
-            name: r.Z_NAME,
-            parent_id: r.Z_SUPER
-        });
-    }
-
-    Ok(entities)
-}
