@@ -1,13 +1,13 @@
-mod expect;
 mod settings;
 mod db;
+mod ext;
 
 use anyhow::Result;
 use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult};
 use actix_web::middleware::{Compress, Logger};
 use std::env::args;
 use settings::Settings;
-use expect::*;
+use ext::ExpectExt;
 use sqlx::sqlite::SqlitePool;
 use async_graphql::{Schema as AGSchema, EmptyMutation, EmptySubscription};
 use async_graphql_actix_web::{Request, Response};

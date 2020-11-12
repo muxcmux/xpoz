@@ -1,6 +1,6 @@
 use config::{ConfigError, Config, File, Environment};
 use serde::Deserialize;
-use crate::expect::ExpectOrExit;
+use crate::ext::ExpectExt;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Server {

@@ -1,21 +1,9 @@
 use async_graphql::{Object, Context};
 use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
 use sql_builder::SqlBuilder;
+use crate::ext::SqlBuilderExt;
 use anyhow::Result;
 use super::Entity;
-
-trait SqlBuilderExt {
-    /// The same as .sql(), but does log::debug before returning the string
-    fn sqld(&self) -> Result<String>;
-}
-
-impl SqlBuilderExt for SqlBuilder {
-    fn sqld(&self) -> Result<String> {
-        let sql = self.sql()?;
-        log::debug!("{}", sql);
-        Ok(sql)
-    }
-}
 
 #[derive(sqlx::FromRow)]
 pub struct Album {
