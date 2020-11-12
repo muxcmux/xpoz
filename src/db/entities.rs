@@ -1,9 +1,10 @@
-use async_graphql::{Object, Result, Context};
-use sqlx::{query, sqlite::SqlitePool};
+use async_graphql::{Object, Context};
+use anyhow::Result;
+use sqlx::{query_as, sqlite::SqlitePool};
 
 pub struct Entity {
-    id: Option<i32>,
-    name: Option<String>,
+    pub id: Option<i32>,
+    pub name: Option<String>,
     parent_id: Option<i32>
 }
 
@@ -12,46 +13,24 @@ impl Entity {
     async fn id(&self) -> &Option<i32> { &self.id }
     async fn name(&self) -> &Option<String> { &self.name }
     async fn parent_id(&self) -> &Option<i32> { &self.parent_id }
-    async fn parent(&self, ctx: &Context<'_>) -> Result<Option<Self>> {
-        let pid = match self.parent_id {
-            Some(v) => entity(ctx, v).await?,
-            None => None
-        };
-
-        Ok(pid)
+    async fn parent<'a>(&self, ctx: &'a Context<'_>) -> Option<&'a Self> {
+        let cache = ctx.data::<Vec<Entity>>().unwrap();
+        cache.iter().find(|e| { e.id == self.parent_id })
     }
 }
 
-pub async fn entities(ctx: &Context<'_>) -> Result<Vec<Entity>> {
-    let mut entities = vec![];
-    let records = query!("SELECT * FROM Z_PRIMARYKEY")
-        .fetch_all(ctx.data::<SqlitePool>()?)
+pub async fn entities(pool: &SqlitePool) -> Result<Vec<Entity>> {
+    let records = query_as!(Entity, "SELECT Z_ENT as id, Z_NAME as name, Z_SUPER as parent_id FROM Z_PRIMARYKEY")
+        .fetch_all(pool)
         .await?;
 
-    for r in records {
-        entities.push(Entity {
-            id: r.Z_ENT,
-            name: r.Z_NAME,
-            parent_id: r.Z_SUPER
-        });
-    }
-
-    Ok(entities)
+    Ok(records)
 }
 
-pub async fn entity(ctx: &Context<'_>, id: i32) -> Result<Option<Entity>> {
-    let result = query!("SELECT * FROM Z_PRIMARYKEY WHERE Z_ENT = ?", id)
-        .fetch_optional(ctx.data::<SqlitePool>()?)
+pub async fn entity(pool: &SqlitePool, id: i32) -> Result<Option<Entity>> {
+    let result = query_as!(Entity, "SELECT Z_ENT as id, Z_NAME as name, Z_SUPER as parent_id FROM Z_PRIMARYKEY WHERE Z_ENT = ?", id)
+        .fetch_optional(pool)
         .await?;
 
-    let any = match result {
-        Some(r) => Some(Entity {
-            id: r.Z_ENT,
-            name: r.Z_NAME,
-            parent_id: r.Z_SUPER
-        }),
-        None => None
-    };
-
-    Ok(any)
+    Ok(result)
 }

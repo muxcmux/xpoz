@@ -12,8 +12,7 @@ use sqlx::sqlite::SqlitePool;
 use async_graphql::{Schema as AGSchema, EmptyMutation, EmptySubscription};
 use async_graphql_actix_web::{Request, Response};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-use db::{Schema, QueryRoot};
-
+use db::{Schema, QueryRoot, entities::{entities, Entity}};
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -21,19 +20,20 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     let cfg = configure().await;
-    run(cfg.0, cfg.1).await?;
+    run(cfg.0, cfg.1, cfg.2).await?;
 
     Ok(())
 }
 
-async fn configure() -> (Settings, SqlitePool) {
+async fn configure() -> (Settings, SqlitePool, Vec<Entity>) {
     let config_file = args().nth(1)
         .unwrap_or_else(|| { Settings::default_file().to_string() });
     let settings = Settings::from_file(&config_file).expect_or_exit("Config error");
     log::debug!("{:?}", settings);
     let pool = SqlitePool::new(&format!("sqlite://{}", settings.photos.database))
         .await.expect_or_exit("Can't open photos database");
-    (settings, pool)
+    let entities = entities(&pool).await.expect_or_exit("Can't load entities from db");
+    (settings, pool, entities)
 }
 
 
@@ -51,10 +51,11 @@ async fn graphiql() -> AWResult<HttpResponse> {
         )))
 }
 
-async fn run(settings: Settings, pool: SqlitePool) -> Result<()> {
+async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) -> Result<()> {
     let address = settings.server.address.clone();
     let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .data(pool.clone())
+        .data(entity_cache)
         .finish();
     HttpServer::new(move || {
         App::new()
