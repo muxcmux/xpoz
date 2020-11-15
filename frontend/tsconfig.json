@@ -1,0 +1,31 @@
+{
+  "include": ["src", "types"],
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "jsx": "preserve",
+    "baseUrl": "./",
+    /* paths - If you configure Snowpack import aliases, add them here. */
+    "paths": {},
+    /* noEmit - Snowpack builds (emits) files, not tsc. */
+    "noEmit": true,
+    /* Additional Options */
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true,
+    "allowSyntheticDefaultImports": true,
+    "importsNotUsedAsValues": "error",
+    /**
+      To have warnings/errors of the Svelte compiler at the correct position,
+      enable source maps by default.
+     */
+     "sourceMap": true,
+     /** Requests the runtime types from the svelte modules by default. Needed for TS files or else you get errors. */
+     "types": ["svelte"],
+
+     "esModuleInterop": true,
+  }
+}

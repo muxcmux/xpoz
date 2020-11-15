@@ -5,6 +5,7 @@ mod ext;
 use anyhow::Result;
 use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult};
 use actix_web::middleware::{Compress, Logger};
+use actix_cors::Cors;
 use std::env::args;
 use settings::Settings;
 use ext::ExpectExt;
@@ -58,7 +59,12 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
         .data(entity_cache)
         .finish();
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header();
         App::new()
+            .wrap(cors)
             .data(settings.clone())
             .data(pool.clone())
             .data(schema.clone())
