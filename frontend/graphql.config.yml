@@ -1,1 +1,1 @@
-schema: "http://localhost:1234/api"
+schema: "graphql.schema.json"

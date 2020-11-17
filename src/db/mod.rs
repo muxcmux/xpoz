@@ -1,4 +1,5 @@
 pub mod entities;
+pub mod assets;
 mod albums;
 
 use async_graphql::{

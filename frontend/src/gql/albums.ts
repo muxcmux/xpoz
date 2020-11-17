@@ -4,6 +4,7 @@ export const getAllAlbums = gql`
   query getAllAlbums {
     myAlbums {
       id
+      uuid
       title
     }
   }

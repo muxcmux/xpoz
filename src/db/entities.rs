@@ -1,26 +1,42 @@
 use async_graphql::{Object, Context};
 use anyhow::Result;
-use sqlx::{query_as, sqlite::SqlitePool};
+use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
+use sql_builder::prelude::*;
 
+#[derive(sqlx::FromRow)]
 pub struct Entity {
-    pub id: Option<i32>,
-    pub name: Option<String>,
+    pub id: i32,
+    pub name: String,
     parent_id: Option<i32>
 }
 
 #[Object]
 impl Entity {
-    async fn id(&self) -> &Option<i32> { &self.id }
-    async fn name(&self) -> &Option<String> { &self.name }
+    async fn id(&self) -> &i32 { &self.id }
+    async fn name(&self) -> &String { &self.name }
     async fn parent_id(&self) -> &Option<i32> { &self.parent_id }
     async fn parent<'a>(&self, ctx: &'a Context<'_>) -> Option<&'a Self> {
-        let cache = ctx.data::<Vec<Entity>>().unwrap();
-        cache.iter().find(|e| { e.id == self.parent_id })
+        let cache = ctx.data::<Vec<Entity>>().expect("Couldn't get entity cache");
+        cache.iter().find(|e| { Some(e.id) == self.parent_id })
     }
 }
 
+fn base_select() -> SqlBuilder {
+    let fields = [
+        "Z_ENT as id",
+        "Z_NAME as name",
+        "Z_SUPER as parent_id"
+    ];
+
+    let mut builder = SqlBuilder::select_from("Z_PRIMARYKEY");
+    builder.fields(&fields);
+
+    builder
+}
+
 pub async fn entities(pool: &SqlitePool) -> Result<Vec<Entity>> {
-    let records = query_as!(Entity, "SELECT Z_ENT as id, Z_NAME as name, Z_SUPER as parent_id FROM Z_PRIMARYKEY")
+    let select = base_select();
+    let records = query_as::<_, Entity>(select.sql()?.as_str())
         .fetch_all(pool)
         .await?;
 
@@ -28,7 +44,9 @@ pub async fn entities(pool: &SqlitePool) -> Result<Vec<Entity>> {
 }
 
 pub async fn entity(pool: &SqlitePool, id: i32) -> Result<Option<Entity>> {
-    let result = query_as!(Entity, "SELECT Z_ENT as id, Z_NAME as name, Z_SUPER as parent_id FROM Z_PRIMARYKEY WHERE Z_ENT = ?", id)
+    let mut select = base_select();
+    select.and_where_eq("Z_ENT", id);
+    let result = query_as::<_, Entity>(select.sql()?.as_str())
         .fetch_optional(pool)
         .await?;
 

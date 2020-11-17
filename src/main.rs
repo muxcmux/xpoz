@@ -2,8 +2,9 @@ mod settings;
 mod db;
 mod ext;
 
-use anyhow::Result;
-use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult};
+use anyhow::{Result, anyhow};
+use actix_files as fs;
+use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult, error::ErrorNotFound};
 use actix_web::middleware::{Compress, Logger};
 use actix_cors::Cors;
 use std::env::args;
@@ -13,7 +14,7 @@ use sqlx::sqlite::SqlitePool;
 use async_graphql::{Schema as AGSchema, EmptyMutation, EmptySubscription};
 use async_graphql_actix_web::{Request, Response};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-use db::{Schema, QueryRoot, entities::{entities, Entity}};
+use db::{Schema, QueryRoot, assets::asset, entities::{entities, Entity}};
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -52,6 +53,28 @@ async fn graphiql() -> AWResult<HttpResponse> {
         )))
 }
 
+#[get("/asset/{uuid}/{type}")]
+async fn get_asset(
+    path: web::Path<(String, String)>,
+    settings: web::Data<Settings>,
+    pool: web::Data<SqlitePool>
+) -> AWResult<fs::NamedFile> {
+    let path = path.into_inner();
+    let settings = settings.into_inner();
+    let pool = pool.into_inner();
+
+    match asset(&pool, &path.0).await.map_err(|e| ErrorNotFound(e))? {
+        Some(asset) => {
+            let file = match path.1.as_str() {
+                _ => asset.original(&settings),
+            };
+
+            Ok(file.map_err(|e| ErrorNotFound(e))?)
+        },
+        None => Err(ErrorNotFound(anyhow!("The requested asset was not found")))
+    }
+}
+
 async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) -> Result<()> {
     let address = settings.server.address.clone();
     let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
@@ -72,6 +95,7 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
             .wrap(Compress::default())
             .service(api)
             .service(graphiql)
+            .service(get_asset)
     })
     .bind(address)?
     .run()

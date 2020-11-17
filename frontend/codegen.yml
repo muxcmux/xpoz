@@ -1,10 +1,11 @@
 overwrite: true
 schema: "http://localhost:1234/api"
 generates:
-  src/generated/graphql.ts:
+  src/codegen/types.ts:
     plugins:
       - "typescript"
       - "typescript-operations"
-  ./graphql.schema.json:
+    config:
+  graphql.schema.json:
     plugins:
       - "introspection"
