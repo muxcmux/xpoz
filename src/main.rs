@@ -4,7 +4,7 @@ mod ext;
 
 use anyhow::{Result, anyhow};
 use actix_files as fs;
-use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult, error::ErrorNotFound};
+use actix_web::{web, post, get, App, HttpServer, HttpRequest, HttpResponse, Result as AWResult, error::ErrorNotFound};
 use actix_web::middleware::{Compress, Logger};
 use actix_cors::Cors;
 use std::env::args;
@@ -53,19 +53,23 @@ async fn graphiql() -> AWResult<HttpResponse> {
         )))
 }
 
-#[get("/asset/{uuid}/{type}")]
+#[get("/asset/{variant}/{uuid}")]
 async fn get_asset(
-    path: web::Path<(String, String)>,
+    web::Path((variant, uuid)): web::Path<(String, String)>,
+    req: HttpRequest,
     settings: web::Data<Settings>,
     pool: web::Data<SqlitePool>
 ) -> AWResult<fs::NamedFile> {
-    let path = path.into_inner();
     let settings = settings.into_inner();
     let pool = pool.into_inner();
+    let filename = req.match_info().query("filename");
 
-    match asset(&pool, &path.0).await.map_err(|e| ErrorNotFound(e))? {
+    match asset(&pool, &uuid).await.map_err(|e| ErrorNotFound(e))? {
         Some(asset) => {
-            let file = match path.1.as_str() {
+            let file = match variant.as_str() {
+                "thumb" => asset.thumb(&settings, filename),
+                "render" => asset.render(&settings, filename),
+                "resized" => asset.resized(&settings, filename),
                 _ => asset.original(&settings),
             };
 

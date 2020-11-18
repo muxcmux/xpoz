@@ -3,10 +3,11 @@ use actix_files as fs;
 use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
 use sql_builder::prelude::*;
 use crate::ext::SqlBuilderExt;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use crate::settings::Settings;
 use super::{Entity, Album};
-use glob::glob;
+use glob::{glob_with, MatchOptions};
+use std::path::PathBuf;
 
 #[derive(sqlx::FromRow)]
 pub struct Asset {
@@ -40,6 +41,8 @@ impl Asset {
 }
 
 impl Asset {
+    /// Returns the original file for the asset
+    /// There can only ever be one original per asset
     pub fn original(&self, settings: &Settings) -> Result<fs::NamedFile> {
         let mut dir = settings.photos.originals_dir();
         dir.push(self.directory.clone());
@@ -48,13 +51,63 @@ impl Asset {
         Ok(file)
     }
 
-    // pub fn resized(&self, settings: &Settings) -> Result<fs::NamedFile> {
-    //     let mut dir = settings.photos.resized_dir();
-    //     dir.push(self.directory.clone().expect("Tried to get resized file for an asset without a directory"));
-    //     dir.push(format!("{}*", self.uuid.clone().expect("Tried to get resized file for an asset without a uuid")));
-    //     let glb = glob(dir.to_str().unwrap()).expect("Failed to read resized glob patter");
+    /// Returns a requested resized variant of the asset
+    /// or grabs the first one returned by the glob pattern
+    /// if a specific filename was not requested
+    pub fn resized(&self, settings: &Settings, filename: &str) -> Result<fs::NamedFile> {
+        let mut path = settings.photos.resized_dir();
+        self.requested_or_first_in_path(&mut path, filename)
+    }
 
-    // }
+    /// Returns a requested asset with latest edits applied
+    /// pr grabs the first one returned by the glob pattern
+    /// if a specific filename was not requested
+    pub fn render(&self, settings: &Settings, filename: &str) -> Result<fs::NamedFile> {
+        let mut path = settings.photos.renders_dir();
+        self.requested_or_first_in_path(&mut path, filename)
+    }
+
+    /// Returns a requested thumb of the asset with latest edits applied
+    /// or grabs the first one returned by the glob pattern
+    /// if a specific filename was not requested
+    pub fn thumb(&self, settings: &Settings, filename: &str) -> Result<fs::NamedFile> {
+        let mut path = settings.photos.thumbs_dir();
+        self.requested_or_first_in_path(&mut path, filename)
+    }
+
+    fn requested_or_first_in_path(&self, path: &mut PathBuf, requested: &str) -> Result<fs::NamedFile>{
+        match requested {
+            "" => self.first_in_path(path),
+            _ => {
+                path.push(self.directory.clone());
+                path.push(requested);
+                Ok(fs::NamedFile::open(path)?)
+            },
+        }
+    }
+
+    fn first_in_path(&self, path: &mut PathBuf) -> Result<fs::NamedFile> {
+        let extensions = ["jpeg", "jpg", "png", "gif", "mp4", "mov"];
+
+        let options = MatchOptions {
+            case_sensitive: false,
+            require_literal_separator: false,
+            require_literal_leading_dot: false
+        };
+
+        path.push(self.directory.clone());
+
+        let dir = path.to_str().expect("Failed converting a path to a string");
+
+        for ext in extensions.iter() {
+            let pattern = format!("{}/{}*.{}", dir, self.uuid, ext);
+            for entry in glob_with(pattern.as_str(), options).expect("Failed to read resized file glob pattern") {
+                return Ok(fs::NamedFile::open(entry?)?);
+            }
+        }
+
+        Err(anyhow!("Requested variant for this file is not available"))
+    }
 }
 
 fn album_join_tables(cache: &Vec<Entity>) -> (String, String, String) {
