@@ -42,7 +42,6 @@ impl Asset {
 
 impl Asset {
     /// Returns the original file for the asset
-    /// There can only ever be one original per asset
     pub fn original(&self, settings: &Settings) -> Result<fs::NamedFile> {
         let mut dir = settings.photos.originals_dir();
         dir.push(self.directory.clone());
@@ -51,43 +50,26 @@ impl Asset {
         Ok(file)
     }
 
-    /// Returns a requested resized variant of the asset
-    /// or grabs the first one returned by the glob pattern
-    /// if a specific filename was not requested
-    pub fn resized(&self, settings: &Settings, filename: &str) -> Result<fs::NamedFile> {
+    /// Returns the first found resized variant of the asset with latest edits
+    pub fn resized(&self, settings: &Settings) -> Result<fs::NamedFile> {
         let mut path = settings.photos.resized_dir();
-        self.requested_or_first_in_path(&mut path, filename)
+        self.first_in_path(&mut path)
     }
 
-    /// Returns a requested asset with latest edits applied
-    /// pr grabs the first one returned by the glob pattern
-    /// if a specific filename was not requested
-    pub fn render(&self, settings: &Settings, filename: &str) -> Result<fs::NamedFile> {
+    /// Returns the first found original size asset with latest edits applied
+    pub fn render(&self, settings: &Settings) -> Result<fs::NamedFile> {
         let mut path = settings.photos.renders_dir();
-        self.requested_or_first_in_path(&mut path, filename)
+        self.first_in_path(&mut path)
     }
 
-    /// Returns a requested thumb of the asset with latest edits applied
-    /// or grabs the first one returned by the glob pattern
-    /// if a specific filename was not requested
-    pub fn thumb(&self, settings: &Settings, filename: &str) -> Result<fs::NamedFile> {
+    /// Returns the first found thumb of the asset with latest edits applied
+    pub fn thumb(&self, settings: &Settings) -> Result<fs::NamedFile> {
         let mut path = settings.photos.thumbs_dir();
-        self.requested_or_first_in_path(&mut path, filename)
-    }
-
-    fn requested_or_first_in_path(&self, path: &mut PathBuf, requested: &str) -> Result<fs::NamedFile>{
-        match requested {
-            "" => self.first_in_path(path),
-            _ => {
-                path.push(self.directory.clone());
-                path.push(requested);
-                Ok(fs::NamedFile::open(path)?)
-            },
-        }
+        self.first_in_path(&mut path)
     }
 
     fn first_in_path(&self, path: &mut PathBuf) -> Result<fs::NamedFile> {
-        let extensions = ["jpeg", "jpg", "png", "gif", "mp4", "mov"];
+        let extensions = ["jpeg", "mov", "mp4", "jpg", "png", "gif"];
 
         let options = MatchOptions {
             case_sensitive: false,
@@ -101,12 +83,12 @@ impl Asset {
 
         for ext in extensions.iter() {
             let pattern = format!("{}/{}*.{}", dir, self.uuid, ext);
-            for entry in glob_with(pattern.as_str(), options).expect("Failed to read resized file glob pattern") {
+            for entry in glob_with(pattern.as_str(), options).expect("Failed to read glob pattern") {
                 return Ok(fs::NamedFile::open(entry?)?);
             }
         }
 
-        Err(anyhow!("Requested variant for this file is not available"))
+        Err(anyhow!("Requested variant for this asset is not available"))
     }
 }
 

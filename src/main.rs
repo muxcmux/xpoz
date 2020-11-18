@@ -56,20 +56,17 @@ async fn graphiql() -> AWResult<HttpResponse> {
 #[get("/asset/{variant}/{uuid}")]
 async fn get_asset(
     web::Path((variant, uuid)): web::Path<(String, String)>,
-    req: HttpRequest,
     settings: web::Data<Settings>,
     pool: web::Data<SqlitePool>
 ) -> AWResult<fs::NamedFile> {
     let settings = settings.into_inner();
     let pool = pool.into_inner();
-    let filename = req.match_info().query("filename");
-
     match asset(&pool, &uuid).await.map_err(|e| ErrorNotFound(e))? {
         Some(asset) => {
             let file = match variant.as_str() {
-                "thumb" => asset.thumb(&settings, filename),
-                "render" => asset.render(&settings, filename),
-                "resized" => asset.resized(&settings, filename),
+                "thumb" => asset.thumb(&settings),
+                "render" => asset.render(&settings),
+                "resized" => asset.resized(&settings),
                 _ => asset.original(&settings),
             };
 
