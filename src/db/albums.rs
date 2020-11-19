@@ -3,7 +3,7 @@ use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
 use sql_builder::SqlBuilder;
 use crate::ext::SqlBuilderExt;
 use anyhow::Result;
-use super::{Entity, assets::{Asset, assets}};
+use super::{Entity, assets::{Asset, assets, assets_by_id}};
 
 #[derive(sqlx::FromRow)]
 pub struct Album {
@@ -14,7 +14,11 @@ pub struct Album {
     items_count: i32,
     photos_count: i32,
     videos_count: i32,
-    created_at: String
+    created_at: String,
+    key_asset_id: Option<i32>,
+    secondary_key_asset_id: Option<i32>,
+    tertiery_key_asset_id: Option<i32>,
+    custom_key_asset_id: Option<i32>
 }
 
 #[Object]
@@ -26,14 +30,36 @@ impl Album {
     async fn photos_count(&self) -> &i32 { &self.photos_count }
     async fn videos_count(&self) -> &i32 { &self.videos_count }
     async fn created_at(&self) -> &String { &self.created_at }
+
     async fn entity<'a>(&self, ctx: &'a Context<'_>) -> Option<&'a Entity> {
         let cache = ctx.data::<Vec<Entity>>().expect("Couldn't load entity cache");
         cache.iter().find(|e| { e.id == self.entity_id })
     }
+
     async fn assets(&self,  ctx: &Context<'_>) -> AGResult<Vec<Asset>> {
         let assets = assets(ctx.data::<SqlitePool>()?,
-                            ctx.data::<Vec<Entity>>().expect("Couldn't load entity cache"),
+                            ctx.data::<Vec<Entity>>()?,
                             &self).await?;
+        Ok(assets)
+    }
+
+    async fn key_assets(&self, ctx: &Context<'_>) -> AGResult<Vec<Asset>> {
+        let mut ids = vec![];
+        let ordered_key_asset_ids = [
+            &self.custom_key_asset_id,
+            &self.key_asset_id,
+            &self.secondary_key_asset_id,
+            &self.tertiery_key_asset_id
+        ];
+
+        for id in ordered_key_asset_ids.iter() {
+            if let Some(i) = id {
+                ids.push(i);
+            }
+        }
+
+        let assets = assets_by_id(ctx.data::<SqlitePool>()?, ids).await?;
+
         Ok(assets)
     }
 }
@@ -47,7 +73,11 @@ fn base_select(entity: &Entity) -> SqlBuilder {
         "ZCACHEDCOUNT as items_count",
         "ZCACHEDPHOTOSCOUNT as photos_count",
         "ZCACHEDVIDEOSCOUNT as videos_count",
-        "datetime(ZCREATIONDATE,'unixepoch','31 years','localtime') as created_at"
+        "datetime(ZCREATIONDATE,'unixepoch','31 years','localtime') as created_at",
+        "ZKEYASSET as key_asset_id",
+        "ZSECONDARYKEYASSET as secondary_key_asset_id",
+        "ZTERTIARYKEYASSET as tertiery_key_asset_id",
+        "ZCUSTOMKEYASSET as custom_key_asset_id"
     ];
 
     let mut builder = SqlBuilder::select_from("ZGENERICALBUM");

@@ -152,3 +152,14 @@ pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album) -> Re
 
     Ok(records)
 }
+
+pub async fn assets_by_id(pool: &SqlitePool, ids: Vec<&i32>) -> Result<Vec<Asset>> {
+    let mut select = base_select();
+    select.and_where_in("Z_PK", &ids);
+
+    let records = query_as::<_, Asset>(select.sqld()?.as_str())
+        .fetch_all(pool)
+        .await?;
+
+    Ok(records)
+}
