@@ -51,7 +51,7 @@ pub struct Settings {
 
 fn set_defaults(config: &mut Config) {
     let defaults = [
-        ["server.address", "127.0.0.1:1234"],
+        ["server.address", "0.0.0.0:1234"],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
         ["photos.database", "test.sqlite"],
         ["photos.originals", "originals"],

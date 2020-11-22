@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 #[derive(sqlx::FromRow)]
 pub struct Asset {
-    id: i32,
+    pub id: i32,
     uuid: String,
     entity_id: i32,
     created_at: String,
@@ -92,15 +92,16 @@ impl Asset {
     }
 }
 
-fn album_join_tables(cache: &Vec<Entity>) -> (String, String, String) {
+fn album_join_tables(cache: &Vec<Entity>) -> (String, String, String, String) {
     let album = cache.iter().find(|e| { e.name == "Album" })
         .expect("Couldn't find an 'Album' entity in the entity cache");
-    let generic_asset = cache.iter().find(|e| { e.name == "GenericAsset" })
-        .expect("Couldn't find a 'GenericAsset' entity in the entity cache");
+    let asset = cache.iter().find(|e| { e.name == "Asset" })
+        .expect("Couldn't find a 'Asset' entity in the entity cache");
     let join_table = format!("Z_{}ASSETS as joins", album.id);
     let album_fk = format!("Z_{}ALBUMS", album.id);
-    let asset_fk = format!("Z_{}ASSETS", generic_asset.id);
-    (join_table, album_fk, asset_fk)
+    let asset_fk = format!("Z_{}ASSETS", asset.id);
+    let order_key = format!("Z_FOK_{}ASSETS", asset.id);
+    (join_table, album_fk, asset_fk, order_key)
 }
 
 fn base_select() -> SqlBuilder {
@@ -118,7 +119,7 @@ fn base_select() -> SqlBuilder {
         "ZDURATION as duration"
     ];
 
-    let mut builder = SqlBuilder::select_from("ZGENERICASSET as assets");
+    let mut builder = SqlBuilder::select_from("ZASSET as assets");
 
     builder.fields(&fields)
         .and_where_lt("assets.ZTRASHEDSTATE", 1);
@@ -144,7 +145,8 @@ pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album) -> Re
 
     select.join(joins.0)
         .on(format!("joins.{} = assets.Z_PK", joins.2))
-        .and_where_eq(format!("joins.{}", joins.1), album.id);
+        .and_where_eq(format!("joins.{}", joins.1), album.id)
+        .order_asc(joins.3);
 
     let records = query_as::<_, Asset>(select.sqld()?.as_str())
         .fetch_all(pool)
@@ -153,9 +155,9 @@ pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album) -> Re
     Ok(records)
 }
 
-pub async fn assets_by_id(pool: &SqlitePool, ids: Vec<&i32>) -> Result<Vec<Asset>> {
+pub async fn assets_by_id(pool: &SqlitePool, ids: &Vec<i32>) -> Result<Vec<Asset>> {
     let mut select = base_select();
-    select.and_where_in("Z_PK", &ids);
+    select.and_where_in("Z_PK", ids);
 
     let records = query_as::<_, Asset>(select.sqld()?.as_str())
         .fetch_all(pool)

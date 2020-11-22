@@ -16,6 +16,10 @@ use entities::{Entity, entities, entity};
 use albums::{Album, album, my_albums};
 use sqlx::SqlitePool;
 
+// pub async fn get_connection(settings: &Settings) -> Result<SqliteConnection> {
+//     SqliteConnection::connect(&format!("sqlite://{}", settings.photos.database)).await?
+// }
+
 pub struct QueryRoot;
 
 #[Object]
@@ -30,9 +34,9 @@ impl QueryRoot {
         entities(ctx.data::<SqlitePool>()?).await.map_err(Error::from)
     }
 
-    /// Get an album by it's id
-    async fn album(&self, ctx: &Context<'_>, id: i32) -> Result<Option<Album>> {
-        album(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, id).await.map_err(Error::from)
+    /// Get an album by it's uuid
+    async fn album(&self, ctx: &Context<'_>, uuid: String) -> Result<Option<Album>> {
+        album(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, &uuid).await.map_err(Error::from)
     }
 
     /// "My Albums" which have been xpozed, keeping the original Photos sorting

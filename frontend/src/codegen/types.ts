@@ -20,6 +20,7 @@ export type Album = {
   createdAt: Scalars['String'];
   entity?: Maybe<Entity>;
   assets: Array<Asset>;
+  keyAssets: Array<Asset>;
 };
 
 export type Asset = {
@@ -49,7 +50,7 @@ export type QueryRoot = {
   entity?: Maybe<Entity>;
   /** Returns all available entities in the photos app */
   entities: Array<Entity>;
-  /** Get an album by it's id */
+  /** Get an album by it's uuid */
   album?: Maybe<Album>;
   /** "My Albums" which have been xpozed, keeping the original Photos sorting */
   myAlbums: Array<Album>;
@@ -62,5 +63,5 @@ export type QueryRootEntityArgs = {
 
 
 export type QueryRootAlbumArgs = {
-  id: Scalars['Int'];
+  uuid: Scalars['String'];
 };

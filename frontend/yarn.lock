@@ -5621,6 +5621,11 @@ regenerator-runtime@^0.13.4:
   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.13.7.tgz#cac2dacc8a1ea675feaabaeb8ae833898ae46f55"
   integrity sha512-a54FxoJDIr27pgf7IgeQGxmqUNYrcV338lf/6gH456HZ/PhX+5BcwHXG9ajESmwe6WRO0tAzRUrRmNONWgkrew==
 
+regexparam@1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/regexparam/-/regexparam-1.3.0.tgz#2fe42c93e32a40eff6235d635e0ffa344b92965f"
+  integrity sha512-6IQpFBv6e5vz1QAqI+V4k8P2e/3gRrqfCJ9FI+O1FLQTO+Uz6RXZEZOPmTJ6hlGj7gkERzY5BRCv09whKP96/g==
+
 registry-auth-token@^4.0.0:
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/registry-auth-token/-/registry-auth-token-4.2.1.tgz#6d7b4006441918972ccd5fedcd41dc322c79b250"
@@ -6354,6 +6359,13 @@ svelte-preprocess@^4.0.8, svelte-preprocess@^4.5.2:
     "@types/sass" "^1.16.0"
     detect-indent "^6.0.0"
     strip-indent "^3.0.0"
+
+svelte-spa-router@^3.0.5:
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/svelte-spa-router/-/svelte-spa-router-3.0.5.tgz#097506578ac2371c9556b9789bd397d408968d92"
+  integrity sha512-MewNP2IoKcnFBZ5Ni1Ntrow+Enx2rS2lY9hGOWE0ZIHGf/8AhUhpoHQ7a5iv0cAIEUxYVJ480X9GIEURsjfDGA==
+  dependencies:
+    regexparam "1.3.0"
 
 svelte@^3.24.0:
   version "3.29.7"

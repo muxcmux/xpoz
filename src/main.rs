@@ -4,7 +4,7 @@ mod ext;
 
 use anyhow::{Result, anyhow};
 use actix_files as fs;
-use actix_web::{web, post, get, App, HttpServer, HttpRequest, HttpResponse, Result as AWResult, error::ErrorNotFound};
+use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult, error::ErrorNotFound};
 use actix_web::middleware::{Compress, Logger};
 use actix_cors::Cors;
 use std::env::args;
@@ -41,6 +41,7 @@ async fn configure() -> (Settings, SqlitePool, Vec<Entity>) {
 
 #[post("/api")]
 async fn api(schema: web::Data<Schema>, req: Request) -> Response {
+    // std::thread::sleep_ms(1000);
     schema.execute(req.into_inner()).await.into()
 }
 

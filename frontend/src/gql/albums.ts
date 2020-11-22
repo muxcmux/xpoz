@@ -1,11 +1,28 @@
-import gql from "./gql";
-
-export const getAllAlbums = gql`
-  query getAllAlbums {
+export const getMyAlbums = `
+  query {
     myAlbums {
-      id
       uuid
       title
+      photosCount
+      videosCount
+      createdAt
+      keyAssets {
+        uuid
+      }
+    }
+  }
+`;
+
+export const getAlbum = `
+  query($uuid: String!) {
+    album(uuid: $uuid) {
+      uuid
+      title
+      photosCount
+      videosCount
+      assets {
+        uuid
+      }
     }
   }
 `;

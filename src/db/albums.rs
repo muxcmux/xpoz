@@ -1,6 +1,6 @@
 use async_graphql::{Object, Context, Result as AGResult};
 use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
-use sql_builder::SqlBuilder;
+use sql_builder::prelude::*;
 use crate::ext::SqlBuilderExt;
 use anyhow::Result;
 use super::{Entity, assets::{Asset, assets, assets_by_id}};
@@ -46,22 +46,32 @@ impl Album {
     async fn key_assets(&self, ctx: &Context<'_>) -> AGResult<Vec<Asset>> {
         let mut ids = vec![];
         let ordered_key_asset_ids = [
-            &self.custom_key_asset_id,
-            &self.key_asset_id,
-            &self.secondary_key_asset_id,
-            &self.tertiery_key_asset_id
+            self.custom_key_asset_id,
+            self.key_asset_id,
+            self.secondary_key_asset_id,
+            self.tertiery_key_asset_id
         ];
 
         for id in ordered_key_asset_ids.iter() {
             if let Some(i) = id {
-                ids.push(i);
+                ids.push(*i);
             }
         }
 
-        let assets = assets_by_id(ctx.data::<SqlitePool>()?, ids).await?;
+        log::debug!("KEY ASSET IDS ARE: {:?}", ids);
 
+        let mut assets = assets_by_id(ctx.data::<SqlitePool>()?, &ids).await?;
+        assets.sort_by(|a, b| {
+            let a_pos = &ids.iter().position(|&s| { s == a.id });
+            let b_pos = &ids.iter().position(|&s| { s == b.id });
+            a_pos.unwrap().cmp(&b_pos.unwrap())
+        });
+
+        for asset in assets.iter() {
+            log::debug!("SOFTED ASSET: {:?}", asset.id);
+        }
         Ok(assets)
-    }
+   }
 }
 
 fn base_select(entity: &Entity) -> SqlBuilder {
@@ -91,10 +101,10 @@ fn base_select(entity: &Entity) -> SqlBuilder {
     builder
 }
 
-pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, id: i32) -> Result<Option<Album>> {
+pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, uuid: &String) -> Result<Option<Album>> {
     let entity = cache.iter().find(|e| { e.name == "Album" });
     let mut select = base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
-    select.and_where_eq("Z_PK", id);
+    select.and_where("ZUUID = ?".bind(uuid));
 
     let result = query_as::<_, Album>(select.sqld()?.as_str())
         .fetch_optional(pool)
