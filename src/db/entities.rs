@@ -1,6 +1,6 @@
 use async_graphql::{Object, Context};
 use anyhow::Result;
-use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
+use sqlx::{query_as, sqlite::SqlitePool};
 use sql_builder::prelude::*;
 
 #[derive(sqlx::FromRow)]

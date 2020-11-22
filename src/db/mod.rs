@@ -16,10 +16,6 @@ use entities::{Entity, entities, entity};
 use albums::{Album, album, my_albums};
 use sqlx::SqlitePool;
 
-// pub async fn get_connection(settings: &Settings) -> Result<SqliteConnection> {
-//     SqliteConnection::connect(&format!("sqlite://{}", settings.photos.database)).await?
-// }
-
 pub struct QueryRoot;
 
 #[Object]

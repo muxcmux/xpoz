@@ -1,7 +1,6 @@
 use async_graphql::{Object, Context, Result as AGResult};
-use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
+use sqlx::{query_as, sqlite::SqlitePool};
 use sql_builder::prelude::*;
-use crate::ext::SqlBuilderExt;
 use anyhow::Result;
 use super::{Entity, assets::{Asset, assets, assets_by_id}};
 
@@ -58,8 +57,6 @@ impl Album {
             }
         }
 
-        log::debug!("KEY ASSET IDS ARE: {:?}", ids);
-
         let mut assets = assets_by_id(ctx.data::<SqlitePool>()?, &ids).await?;
         assets.sort_by(|a, b| {
             let a_pos = &ids.iter().position(|&s| { s == a.id });
@@ -67,9 +64,6 @@ impl Album {
             a_pos.unwrap().cmp(&b_pos.unwrap())
         });
 
-        for asset in assets.iter() {
-            log::debug!("SOFTED ASSET: {:?}", asset.id);
-        }
         Ok(assets)
    }
 }
@@ -106,7 +100,7 @@ pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, uuid: &String) -> Res
     let mut select = base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
     select.and_where("ZUUID = ?".bind(uuid));
 
-    let result = query_as::<_, Album>(select.sqld()?.as_str())
+    let result = query_as::<_, Album>(select.sql()?.as_str())
         .fetch_optional(pool)
         .await?;
 
@@ -116,7 +110,7 @@ pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, uuid: &String) -> Res
 pub async fn my_albums(pool: &SqlitePool, cache: &Vec<Entity>) -> Result<Vec<Album>> {
     let entity = cache.iter().find(|e| { e.name == "Album" });
     let select = base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
-    let records = query_as::<_, Album>(select.sqld()?.as_str())
+    let records = query_as::<_, Album>(select.sql()?.as_str())
         .fetch_all(pool)
         .await?;
 

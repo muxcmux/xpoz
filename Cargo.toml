@@ -21,5 +21,5 @@ thiserror = "1"
 anyhow = "1"
 async-graphql = "2"
 async-graphql-actix-web = "2"
-sqlx = { version = "0.3", default-features = true, features = ["sqlite"] }
+sqlx = { version = "0.4", default-features = true, features = ["sqlite", "runtime-actix-native-tls"] }
 sql-builder = "3"

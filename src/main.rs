@@ -1,6 +1,5 @@
 mod settings;
 mod db;
-mod ext;
 
 use anyhow::{Result, anyhow};
 use actix_files as fs;
@@ -9,7 +8,6 @@ use actix_web::middleware::{Compress, Logger};
 use actix_cors::Cors;
 use std::env::args;
 use settings::Settings;
-use ext::ExpectExt;
 use sqlx::sqlite::SqlitePool;
 use async_graphql::{Schema as AGSchema, EmptyMutation, EmptySubscription};
 use async_graphql_actix_web::{Request, Response};
@@ -30,11 +28,11 @@ async fn main() -> Result<()> {
 async fn configure() -> (Settings, SqlitePool, Vec<Entity>) {
     let config_file = args().nth(1)
         .unwrap_or_else(|| { Settings::default_file().to_string() });
-    let settings = Settings::from_file(&config_file).expect_or_exit("Config error");
+    let settings = Settings::from_file(&config_file).expect("Config error");
     log::debug!("{:?}", settings);
-    let pool = SqlitePool::new(&format!("sqlite://{}", settings.photos.database))
-        .await.expect_or_exit("Can't open photos database");
-    let entities = entities(&pool).await.expect_or_exit("Can't load entities from db");
+    let pool = SqlitePool::connect(&settings.photos.database_url())
+        .await.expect("Can't open photos database");
+    let entities = entities(&pool).await.expect("Can't load entities from db");
     (settings, pool, entities)
 }
 

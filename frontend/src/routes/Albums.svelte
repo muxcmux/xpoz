@@ -18,6 +18,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
     grid-auto-rows: 14em;
+    gap: 1px;
 
     a {
       position: relative;

@@ -1,8 +1,7 @@
 use async_graphql::{Object, Context};
 use actix_files as fs;
-use sqlx::{query_as, sqlite::{SqlitePool, SqliteQueryAs}};
+use sqlx::{query_as, sqlite::SqlitePool};
 use sql_builder::prelude::*;
-use crate::ext::SqlBuilderExt;
 use anyhow::{Result, anyhow};
 use crate::settings::Settings;
 use super::{Entity, Album};
@@ -131,7 +130,7 @@ pub async fn asset(pool: &SqlitePool, uuid: &String) -> Result<Option<Asset>> {
     let mut select = base_select();
     select.and_where("ZUUID = ?".bind(uuid));
 
-    let record = query_as::<_, Asset>(select.sqld()?.as_str())
+    let record = query_as::<_, Asset>(select.sql()?.as_str())
         .fetch_optional(pool)
         .await?;
 
@@ -148,7 +147,7 @@ pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album) -> Re
         .and_where_eq(format!("joins.{}", joins.1), album.id)
         .order_asc(joins.3);
 
-    let records = query_as::<_, Asset>(select.sqld()?.as_str())
+    let records = query_as::<_, Asset>(select.sql()?.as_str())
         .fetch_all(pool)
         .await?;
 
@@ -159,7 +158,7 @@ pub async fn assets_by_id(pool: &SqlitePool, ids: &Vec<i32>) -> Result<Vec<Asset
     let mut select = base_select();
     select.and_where_in("Z_PK", ids);
 
-    let records = query_as::<_, Asset>(select.sqld()?.as_str())
+    let records = query_as::<_, Asset>(select.sql()?.as_str())
         .fetch_all(pool)
         .await?;
 
