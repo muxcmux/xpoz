@@ -1,7 +1,16 @@
-
 .page {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
+}
+
+.error {
+  color: var(--color-red);
+}
+
+#load-more {
+  text-align: center;
+  opacity: .5;
+  padding: 2em 1em;
 }

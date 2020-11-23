@@ -23,6 +23,11 @@ export type Album = {
   keyAssets: Array<Asset>;
 };
 
+
+export type AlbumAssetsArgs = {
+  page: Scalars['Int'];
+};
+
 export type Asset = {
   __typename?: 'Asset';
   id: Scalars['Int'];
@@ -64,4 +69,9 @@ export type QueryRootEntityArgs = {
 
 export type QueryRootAlbumArgs = {
   uuid: Scalars['String'];
+};
+
+
+export type QueryRootMyAlbumsArgs = {
+  page: Scalars['Int'];
 };

@@ -35,10 +35,12 @@ impl Album {
         cache.iter().find(|e| { e.id == self.entity_id })
     }
 
-    async fn assets(&self,  ctx: &Context<'_>) -> AGResult<Vec<Asset>> {
+    async fn assets(&self,  ctx: &Context<'_>, page: i32) -> AGResult<Vec<Asset>> {
         let assets = assets(ctx.data::<SqlitePool>()?,
                             ctx.data::<Vec<Entity>>()?,
-                            &self).await?;
+                            &self,
+                            page * 10,
+                            10).await?;
         Ok(assets)
     }
 
@@ -107,9 +109,10 @@ pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, uuid: &String) -> Res
     Ok(result)
 }
 
-pub async fn my_albums(pool: &SqlitePool, cache: &Vec<Entity>) -> Result<Vec<Album>> {
+pub async fn my_albums(pool: &SqlitePool, cache: &Vec<Entity>, page: i32) -> Result<Vec<Album>> {
     let entity = cache.iter().find(|e| { e.name == "Album" });
-    let select = base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
+    let mut select = base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
+    select.offset(page * 10).limit(10);
     let records = query_as::<_, Album>(select.sql()?.as_str())
         .fetch_all(pool)
         .await?;

@@ -137,7 +137,7 @@ pub async fn asset(pool: &SqlitePool, uuid: &String) -> Result<Option<Asset>> {
     Ok(record)
 }
 
-pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album) -> Result<Vec<Asset>> {
+pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album, offset: i32, limit: i32) -> Result<Vec<Asset>> {
     let joins = album_join_tables(cache);
 
     let mut select = base_select();
@@ -145,6 +145,8 @@ pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album) -> Re
     select.join(joins.0)
         .on(format!("joins.{} = assets.Z_PK", joins.2))
         .and_where_eq(format!("joins.{}", joins.1), album.id)
+        .offset(offset)
+        .limit(limit)
         .order_asc(joins.3);
 
     let records = query_as::<_, Asset>(select.sql()?.as_str())

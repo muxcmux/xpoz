@@ -1,20 +1,5 @@
 <style lang="scss">
-  p {
-    font-size: 1.6em;
-    text-align: center;
-    font-weight: 300;
-    margin: 0;
-    height: calc(var(--vh, 1vh) * 100);
-    padding: 2em;
-    display: grid;
-    place-items: center;
-
-    &.error {
-      color: var(--color-red);
-    }
-  }
-
-  section {
+  .results {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
     grid-auto-rows: 14em;
@@ -79,36 +64,63 @@
       }
     }
   }
-</style>
 
-<script>
-  import { fade, scale } from "svelte/transition";
+  </style>
+
+<script lang="ts">
+  import { isVisible } from "../utils/viewport";
+  import { scale } from "svelte/transition";
+  import { onMount, afterUpdate } from "svelte";
   import { getMyAlbums } from "../gql/albums";
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
 
-  const request = operationStore(getMyAlbums);
+  const request = operationStore(getMyAlbums, { page: 0 });
 
   query(request);
 
-  $: loading = $request.fetching as boolean;
-  $: error   = $request.error;
-  $: albums  = $request.data?.myAlbums as Array<Album>;
+  onMount(() => {
+    window.scrollTo(0, 0);
+    observer.observe(document.getElementById("load-more")!);
+  });
 
+  let albums: Array<Album> = [];
+  let hasMore = true;
+
+  $: if (!$request.fetching && $request.data?.myAlbums) {
+    if ($request.data?.myAlbums?.length == 0) {
+      hasMore = false;
+    } else {
+      ($request.data?.myAlbums as Array<Album>).forEach((album) => {
+        albums = [...albums, album];
+      });
+      afterUpdate(() => {
+        if (isVisible(document.getElementById("load-more"))) loadMore();
+      });
+    }
+  }
+
+  let observer = new IntersectionObserver(onEndOfList, {
+    root: null,
+    threshold: 0.5
+  })
+
+  function onEndOfList(changes: Array<IntersectionObserverEntry>) {
+    if (changes[0].isIntersecting) loadMore();
+  }
+
+  function loadMore() {
+    if (!$request.fetching && hasMore && $request.variables) {
+      console.log("HAS MORE", hasMore, "PAGE", $request.variables?.page);
+      $request.variables!.page += 1;
+    }
+  }
 </script>
 
-{#if loading}
-  <p transition:fade="{{ duration: 150 }}">Loading albums, please wait...</p>
-{:else if error}
-  <p transition:fade="{{ duration: 150 }}" class="error">
-    There was an error loading albums:<br>
-    {error.message}
-  </p>
-{:else if albums}
-  <section class="page">
-    {#each albums as album, i}
-      <a href="#/album/{album.uuid}"
-       transition:scale="{{ duration: 250, delay: (250 / albums.length) * i}}">
+<section class="page">
+  <div class="results">
+    {#each albums as album (album.uuid)}
+      <a href="#/album/{album.uuid}" transition:scale="{{ duration: 250}}">
         <figure>
           {#if album.keyAssets[0]}
             <img src="http://localhost:1234/asset/thumb/{album.keyAssets[0].uuid}" alt="{album.title || "Album title"}">
@@ -129,5 +141,18 @@
         </figure>
       </a>
     {/each}
-  </section>
-{/if}
+  </div>
+
+  <div id="load-more">
+    {#if $request.fetching}
+      <p>💭</p>
+    {:else if $request.error}
+      <p class="error">
+        😵
+        {$request.error?.message}
+      </p>
+    {:else if !hasMore}
+      <p>🥳</p>
+    {/if}
+  </div>
+</section>

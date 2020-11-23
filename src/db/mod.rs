@@ -36,8 +36,8 @@ impl QueryRoot {
     }
 
     /// "My Albums" which have been xpozed, keeping the original Photos sorting
-    async fn my_albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>> {
-        my_albums(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?).await.map_err(Error::from)
+    async fn my_albums(&self, ctx: &Context<'_>, page: i32) -> Result<Vec<Album>> {
+        my_albums(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, page).await.map_err(Error::from)
     }
 }
 
