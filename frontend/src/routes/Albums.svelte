@@ -3,7 +3,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
     grid-auto-rows: 14em;
-    gap: 1px;
+    gap: 2px;
 
     a {
       position: relative;
@@ -37,20 +37,21 @@
           flex-direction: column;
           justify-content: flex-end;
           font-weight: 600;
+          font-size: 1.2em;
           opacity: .85;
 
           div {
-            font-size: .9rem;
+            font-size: 1rem;
             font-weight: 300;
             display: flex;
             align-items: center;
             opacity: .8;
 
             svg {
-              width: 16px;
-              height: 16px;
+              width: 1.1em;
+              height: 1.1em;
               fill: white;
-              margin: 0 6px 0 12px;
+              margin: 0 .3em 0 .8em;
 
               &:first-of-type { margin-left: 0 }
             }
@@ -65,12 +66,25 @@
     }
   }
 
-  </style>
+  @media screen and (min-width: 30em) {
+    .results {
+      gap: 1px;
+
+      a {
+        figure {
+          figcaption {
+            font-size: 1em;
+          }
+        }
+      }
+    }
+  }
+ </style>
 
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
   import { scale } from "svelte/transition";
-  import { onMount, afterUpdate } from "svelte";
+  import { onMount, tick } from "svelte";
   import { getMyAlbums } from "../gql/albums";
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
@@ -81,23 +95,19 @@
 
   onMount(() => {
     window.scrollTo(0, 0);
-    observer.observe(document.getElementById("load-more")!);
+    observer.observe(document.getElementById("load-more-albums")!);
   });
 
   let albums: Array<Album> = [];
   let hasMore = true;
 
   $: if (!$request.fetching && $request.data?.myAlbums) {
-    if ($request.data?.myAlbums?.length == 0) {
-      hasMore = false;
-    } else {
-      ($request.data?.myAlbums as Array<Album>).forEach((album) => {
-        albums = [...albums, album];
-      });
-      afterUpdate(() => {
-        if (isVisible(document.getElementById("load-more"))) loadMore();
-      });
-    }
+    let add = $request.data?.myAlbums;
+    albums = [...albums, ...add];
+    if ($request.data.myAlbums.length < 10) hasMore = false;
+    tick().then(() => {
+      if (isVisible(document.getElementById("load-more-albums"))) loadMore();
+    });
   }
 
   let observer = new IntersectionObserver(onEndOfList, {
@@ -110,30 +120,27 @@
   }
 
   function loadMore() {
-    if (!$request.fetching && hasMore && $request.variables) {
-      console.log("HAS MORE", hasMore, "PAGE", $request.variables?.page);
-      $request.variables!.page += 1;
-    }
+    if (!$request.fetching && hasMore) $request.variables!.page += 1;
   }
 </script>
 
 <section class="page">
   <div class="results">
     {#each albums as album (album.uuid)}
-      <a href="#/album/{album.uuid}" transition:scale="{{ duration: 250}}">
+      <a href="/#/album/{album.uuid}" transition:scale="{{ duration: 350}}">
         <figure>
           {#if album.keyAssets[0]}
-            <img src="http://localhost:1234/asset/thumb/{album.keyAssets[0].uuid}" alt="{album.title || "Album title"}">
+            <img src="http://192.168.1.2:1234/asset/thumb/{album.keyAssets[0].uuid}" alt="{album.title || "Album title"}">
           {/if}
           <figcaption>
             {album.title}
             <div>
               {#if album.photosCount > 0}
-                <svg><use href="#i-camera"/></svg>
-                <span>{album.photosCount}</span>
+                <svg><use xlink:href="#i-camera"/></svg>
+                <span>{album.photosCount.toLocaleString()}</span>
               {/if}
               {#if album.videosCount > 0}
-                <svg><use href="#i-video"/></svg>
+                <svg><use xlink:href="#i-video"/></svg>
                 <span>{album.videosCount}</span>
               {/if}
             </div>
@@ -143,13 +150,12 @@
     {/each}
   </div>
 
-  <div id="load-more">
+  <div class="load-more" id="load-more-albums" transition:scale="{{ duration: 250 }}">
     {#if $request.fetching}
       <p>💭</p>
     {:else if $request.error}
       <p class="error">
-        😵
-        {$request.error?.message}
+        😵 {$request.error?.message}
       </p>
     {:else if !hasMore}
       <p>🥳</p>

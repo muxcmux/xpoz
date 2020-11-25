@@ -2,8 +2,8 @@
   .results {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: calc((100vw - 3px) / 4);
-    gap: 1px;
+    grid-auto-rows: calc((100vw - 6px) / 4);
+    gap: 2px;
 
   }
 
@@ -20,18 +20,36 @@
     height: 100%;
   }
 
-  header { margin: 1em; }
+  header { margin: 1em .6em; }
 
   h1 {
     margin: 0;
     color: var(--color-fg);
     font-weight: 700;
     font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
-    svg {
-      height: .7em;
-      width: .7em;
-      margin-right: .2em;
+    a {
+      display: block;
+      height: 1.3em;
+      width: 1.2em;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    span {
+      margin-right: 1.1em;
+      flex: 1;
+      padding: 0 .5em;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
@@ -42,9 +60,12 @@
     opacity: .5;
     margin-top: .5em;
     margin-bottom: .5em;
+    text-align: center;
 
     span {
-      padding-right: .5em;
+      padding-left: .5em;
+
+      &:first-of-type { padding-left: 0 }
     }
   }
 
@@ -56,10 +77,22 @@
       grid-auto-rows: calc((100vw - 4em) / 5);
     }
 
-    h1 { font-size: 1.5em }
+    h1 {
+      font-size: 1.5em;
+
+      span { text-align: left }
+
+      a {
+        width: 1em;
+        height: 1.1em;
+      }
+    }
+
+    h2 { text-align: left }
 
     header {
       border-bottom: 1px solid rgba(255, 255, 255, .2);
+      margin: 1em;
     }
 
     img { object-fit: contain }
@@ -82,13 +115,15 @@
 
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
-  import { scale } from "svelte/transition";
+  import { scale, fly } from "svelte/transition";
   import { onMount, tick } from "svelte";
   import { getAlbum } from "../gql/albums";
-  import type { Album, Asset } from "../codegen/types";
-  import { operationStore, query } from '@urql/svelte';
+  import type { Asset } from "../codegen/types";
+  import { operationStore, query } from "@urql/svelte";
+  import { querystring, replace } from "svelte-spa-router";
+  import Spotlight from "./Spotlight.svelte";
 
-  export let params: { uuid?: String } = {};
+  export let params: { uuid?: string } = {};
 
   const req = operationStore(getAlbum, { uuid: params.uuid, page: 0 });
 
@@ -96,20 +131,17 @@
 
   onMount(() => {
     window.scrollTo(0, 0);
-    observer.observe(document.getElementById("load-more")!);
-  })
+    observer.observe(document.getElementById("load-more-photos")!);
+  });
 
-  let assets: Array<Asset> = [];
+  let albumAssets: Array<Asset> = [];
   let hasMore = true;
 
   $: if (!$req.fetching && $req.data?.album) {
-    ($req.data.album.assets as Array<Asset>).forEach((asset) => {
-      assets = [...assets, asset];
-    });
+    let add = $req.data.album.assets as Array<Asset>;
+    albumAssets = [...albumAssets, ...add];
     if ($req.data.album.assets.length < 10) hasMore = false;
-    tick().then(() => {
-      if (isVisible(document.getElementById("load-more"))) loadMore();
-    });
+    tick().then(() => onScroll());
   }
 
   let observer = new IntersectionObserver(onEndOfList, {
@@ -122,44 +154,52 @@
   }
 
   function loadMore() {
-    if (!$req.fetching && hasMore && $req.variables) {
-      console.log($req.variables.page);
-      $req.variables!.page += 1;
-    }
+    if (!$req.fetching && hasMore) $req.variables!.page += 1;
   }
+
+  function onScroll() {
+    if (isVisible(document.getElementById("load-more-photos"))) loadMore();
+  }
+
+  $: assetUUID = $querystring;
+  $: album = $req.data?.album;
 </script>
 
+{#if assetUUID}
+  <Spotlight uuid={assetUUID} />
+{/if}
+
 <section class="page">
-  <header>
-    <h1>
-      <a href="/#/" title="Back to albums">
-        <svg><use href="#i-chevron-left"/></svg>
-      </a>
-      {#if $req.data?.album}
-        {$req.data.album.title}
-      {:else}
-        <span style="opacity: .5">Loading...</span>
-      {/if}
-    </h1>
-    <h2>
-      {#if $req.data?.album?.photosCount > 0}
-        <span>{$req.data.album.photosCount} {$req.data.album.photosCount > 1 ? 'Photos' : 'Photo'}</span>
-      {/if}
-      {#if $req.data?.album?.videosCount > 0}
-        <span>{$req.data.album.videosCount} {$req.data.album.videosCount > 1 ? 'Videos' : 'Video'}</span>
-      {/if}
-    </h2>
-  </header>
+  {#if album}
+    <header transition:fly="{{ x: -40, duration: 400 }}">
+      <h1>
+        <a href="/#/" title="Back to albums">
+          <svg><use xlink:href="#i-chevron-left"/></svg>
+        </a>
+        <span>{album.title}</span>
+      </h1>
+      <h2>
+        {#if album.photosCount > 0}
+          <span>{album.photosCount.toLocaleString()} {album.photosCount > 1 ? 'Photos' : 'Photo'}</span>
+        {/if}
+        {#if album.videosCount > 0}
+          <span>{album.videosCount.toLocaleString()} {album.videosCount > 1 ? 'Videos' : 'Video'}</span>
+        {/if}
+      </h2>
+    </header>
+  {/if}
 
   <div class="results">
-    {#each assets as asset (asset.uuid)}
-      <figure transition:scale="{{ duration: 250}}">
-        <img src="http://localhost:1234/asset/thumb/{asset.uuid}" alt="{asset.uuid}">
+    {#each albumAssets as asset (asset.uuid)}
+      <figure transition:scale="{{ duration: 350 }}">
+        <a href="/#/album/{album.uuid}?{asset.uuid}">
+          <img src="http://192.168.1.2:1234/asset/thumb/{asset.uuid}" alt="{asset.uuid}">
+        </a>
       </figure>
     {/each}
   </div>
 
-  <div id="load-more">
+  <div class="load-more" id="load-more-photos" transition:scale="{{ duration: 250 }}">
     {#if $req.fetching}
       <p>💭</p>
     {:else if $req.error}

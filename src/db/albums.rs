@@ -39,8 +39,8 @@ impl Album {
         let assets = assets(ctx.data::<SqlitePool>()?,
                             ctx.data::<Vec<Entity>>()?,
                             &self,
-                            page * 10,
-                            10).await?;
+                            page * 20,
+                            20).await?;
         Ok(assets)
     }
 

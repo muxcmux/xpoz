@@ -3,12 +3,19 @@
 </style>
 
 <script>
-import routes from "./routes/routes";
 import Router from "svelte-spa-router";
 import { initClient } from '@urql/svelte';
 import setVh from './utils/vh_fix';
+import Albums from "./routes/Albums.svelte";
+import Album from "./routes/Album.svelte";
 
-initClient({ url: "http://localhost:1234/api" });
+const routes = {
+  '/': Albums,
+  '/album/:uuid': Album,
+  '/album/:uuid/*': Album
+}
+
+initClient({ url: "http://192.168.1.2:1234/api" });
 setVh();
 
 </script>
