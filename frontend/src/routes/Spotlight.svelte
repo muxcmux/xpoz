@@ -1,7 +1,7 @@
 <style lang="scss">
   .backdrop {
     background: black;
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
@@ -22,7 +22,7 @@
   export let uuid: string;
 </script>
 
-<div class="backdrop" transition:fade={{ duration: 150 }}>
+<div class="backdrop" transition:fade={{ duration: 100 }}>
   <img src="http://192.168.1.2:1234/asset/resized/{uuid}"
        alt="{uuid}"
        on:click={() => pop()}/>
