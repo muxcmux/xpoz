@@ -51,6 +51,7 @@
               width: 1.1em;
               height: 1.1em;
               fill: white;
+              stroke-width: 2;
               margin: 0 .3em 0 .8em;
 
               &:first-of-type { margin-left: 0 }

@@ -39,6 +39,7 @@
       svg {
         width: 100%;
         height: 100%;
+        stroke-width: 3;
       }
     }
 
@@ -85,6 +86,8 @@
       a {
         width: 1em;
         height: 1.1em;
+
+        svg { stroke-width: 2 }
       }
     }
 
@@ -120,7 +123,7 @@
   import { getAlbum } from "../gql/albums";
   import type { Asset } from "../codegen/types";
   import { operationStore, query } from "@urql/svelte";
-  import { querystring, replace } from "svelte-spa-router";
+  import { querystring } from "svelte-spa-router";
   import Spotlight from "./Spotlight.svelte";
 
   export let params: { uuid?: string } = {};
@@ -134,12 +137,18 @@
     observer.observe(document.getElementById("load-more-photos")!);
   });
 
-  let albumAssets: Array<Asset> = [];
+  let items: Array<Asset> = [];
   let hasMore = true;
+
+  $: index = parseInt($querystring!);
+  $: album = $req.data?.album;
+
+  const nBeforeLast = 1;
+  $: if (index == items.length - nBeforeLast - 1) loadMore()
 
   $: if (!$req.fetching && $req.data?.album) {
     let add = $req.data.album.assets as Array<Asset>;
-    albumAssets = [...albumAssets, ...add];
+    items = [...items, ...add];
     if ($req.data.album.assets.length < 10) hasMore = false;
     tick().then(() => onScroll());
   }
@@ -160,13 +169,10 @@
   function onScroll() {
     if (isVisible(document.getElementById("load-more-photos"))) loadMore();
   }
-
-  $: assetUUID = $querystring;
-  $: album = $req.data?.album;
 </script>
 
-{#if assetUUID}
-  <Spotlight uuid={assetUUID} />
+{#if album && items && index >= 0 }
+  <Spotlight {index} {items}/>
 {/if}
 
 <section class="page">
@@ -190,9 +196,9 @@
   {/if}
 
   <div class="results">
-    {#each albumAssets as asset (asset.uuid)}
+    {#each items as asset, i (asset.uuid)}
       <figure transition:scale="{{ duration: 350 }}">
-        <a href="/#/album/{album.uuid}?{asset.uuid}">
+        <a href="/#/album/{album.uuid}?{i}">
           <img src="http://192.168.1.2:1234/asset/thumb/{asset.uuid}" alt="{asset.uuid}">
         </a>
       </figure>
