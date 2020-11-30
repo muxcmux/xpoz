@@ -85,7 +85,7 @@
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
   import { scale } from "svelte/transition";
-  import { onMount, tick } from "svelte";
+  import { onMount } from "svelte";
   import { getMyAlbums } from "../gql/albums";
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
@@ -99,16 +99,16 @@
     observer.observe(document.getElementById("load-more-albums")!);
   });
 
-  let albums: Array<Album> = [];
+  let albums: Album[] = [];
   let hasMore = true;
 
-  $: if (!$request.fetching && $request.data?.myAlbums) {
+  $: if (!$request.fetching && $request.data?.myAlbums) insertNewItems();
+
+  function insertNewItems() {
     let add = $request.data?.myAlbums;
     albums = [...albums, ...add];
     if ($request.data.myAlbums.length < 10) hasMore = false;
-    tick().then(() => {
-      if (isVisible(document.getElementById("load-more-albums"))) loadMore();
-    });
+    if (isVisible(document.getElementById("load-more-albums"))) loadMore();
   }
 
   let observer = new IntersectionObserver(onEndOfList, {
@@ -116,7 +116,7 @@
     threshold: 0.5
   })
 
-  function onEndOfList(changes: Array<IntersectionObserverEntry>) {
+  function onEndOfList(changes: IntersectionObserverEntry[]) {
     if (changes[0].isIntersecting) loadMore();
   }
 

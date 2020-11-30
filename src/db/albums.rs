@@ -35,12 +35,12 @@ impl Album {
         cache.iter().find(|e| { e.id == self.entity_id })
     }
 
-    async fn assets(&self,  ctx: &Context<'_>, page: i32) -> AGResult<Vec<Asset>> {
+    async fn assets(&self,  ctx: &Context<'_>, offset: i32, limit: i32) -> AGResult<Vec<Asset>> {
         let assets = assets(ctx.data::<SqlitePool>()?,
                             ctx.data::<Vec<Entity>>()?,
                             &self,
-                            page * 20,
-                            20).await?;
+                            offset,
+                            limit).await?;
         Ok(assets)
     }
 

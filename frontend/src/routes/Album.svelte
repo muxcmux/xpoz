@@ -5,6 +5,9 @@
     grid-auto-rows: calc((100vw - 6px) / 4);
     gap: 2px;
 
+    :global(img.loading) {
+      background-color: rgba(255, 255, 255, .1);
+    }
   }
 
   figure {
@@ -18,6 +21,8 @@
     object-fit: cover;
     width: 100%;
     height: 100%;
+    background-color: rgba(255, 255, 255, 0);
+    transition: .2s background-color ease;
   }
 
   header { margin: 1em .6em; }
@@ -121,14 +126,24 @@
   import { scale, fly } from "svelte/transition";
   import { onMount, tick } from "svelte";
   import { getAlbum } from "../gql/albums";
-  import type { Asset } from "../codegen/types";
   import { operationStore, query } from "@urql/svelte";
+  import type { Asset } from "../codegen/types";
   import { querystring } from "svelte-spa-router";
   import Spotlight from "./Spotlight.svelte";
+  import loadable from "../use/loadable";
 
   export let params: { uuid?: string } = {};
 
-  const req = operationStore(getAlbum, { uuid: params.uuid, page: 0 });
+  let page = 0;
+  // Decide on page size at init by working out the
+  // optimal number of items based on screen size
+  const perPage = 6;
+
+  const req = operationStore(getAlbum, {
+    uuid: params.uuid,
+    offset: 0,
+    limit: perPage,
+  });
 
   query(req);
 
@@ -137,20 +152,28 @@
     observer.observe(document.getElementById("load-more-photos")!);
   });
 
-  let items: Array<Asset> = [];
+  let items: Asset[] = [];
   let hasMore = true;
 
+  $: $req.variables!.offset = page * perPage;
   $: index = parseInt($querystring!);
   $: album = $req.data?.album;
 
-  const nBeforeLast = 1;
-  $: if (index == items.length - nBeforeLast - 1) loadMore()
+  $: if (!$req.fetching && $req.data?.album) insertNewItems();
 
-  $: if (!$req.fetching && $req.data?.album) {
-    let add = $req.data.album.assets as Array<Asset>;
+  function insertNewItems() {
+    let fetched = $req.data.album.assets as Asset[];
+    let add: Asset[] = [];
+    fetched.forEach((asset) => {
+      if (!items.includes(asset)) add.push(asset);
+    })
     items = [...items, ...add];
-    if ($req.data.album.assets.length < 10) hasMore = false;
-    tick().then(() => onScroll());
+    if (items.length >= album.photosCount + album.videosCount || !fetched.length) {
+      hasMore = false;
+    }
+    tick().then(() => {
+      if (isVisible(document.getElementById("load-more-photos"))) loadMore();
+    })
   }
 
   let observer = new IntersectionObserver(onEndOfList, {
@@ -163,16 +186,12 @@
   }
 
   function loadMore() {
-    if (!$req.fetching && hasMore) $req.variables!.page += 1;
-  }
-
-  function onScroll() {
-    if (isVisible(document.getElementById("load-more-photos"))) loadMore();
+    if (!$req.fetching && hasMore) page += 1;
   }
 </script>
 
-{#if album && items && index >= 0 }
-  <Spotlight {index} {items}/>
+{#if album && items && index >= 0}
+  <Spotlight {album} {index} {perPage}/>
 {/if}
 
 <section class="page">
@@ -193,25 +212,24 @@
         {/if}
       </h2>
     </header>
-  {/if}
 
-  <div class="results">
-    {#each items as asset, i (asset.uuid)}
-      <figure transition:scale="{{ duration: 350 }}">
-        <a href="/#/album/{album.uuid}?{i}">
-          <img src="http://192.168.1.2:1234/asset/thumb/{asset.uuid}" alt="{asset.uuid}">
-        </a>
-      </figure>
-    {/each}
-  </div>
+    <div class="results">
+      {#each items as asset, i (asset.uuid)}
+        <figure transition:scale="{{ duration: 350 }}">
+          <a href="/#/album/{album.uuid}?{i}">
+            <img use:loadable={{uuid: asset.uuid, variant: "thumb"}} alt=""/>
+          </a>
+        </figure>
+      {/each}
+    </div>
+  {/if}
 
   <div class="load-more" id="load-more-photos" transition:scale="{{ duration: 250 }}">
     {#if $req.fetching}
       <p>💭</p>
     {:else if $req.error}
       <p class="error">
-        😵
-        {$req.error?.message}
+        😵 {$req.error?.message}
       </p>
     {:else if !hasMore}
       <p>🥳</p>
