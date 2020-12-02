@@ -5,8 +5,12 @@
     grid-auto-rows: calc((100vw - 6px) / 4);
     gap: 2px;
 
-    :global(img.loading) {
-      background-color: rgba(255, 255, 255, .1);
+    :global(.image-loader) {
+      transition: background-color, .2s ease;
+
+      &.loading-thumb {
+        background-color: rgba(255, 255, 255, .1);
+      }
     }
   }
 
@@ -15,14 +19,11 @@
     margin: 0;
     width: 100%;
     height: 100%;
-  }
 
-  img {
-    object-fit: cover;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0);
-    transition: .2s background-color ease;
+    a {
+      display: block;
+      height: 100%;
+    }
   }
 
   header { margin: 1em .6em; }
@@ -102,8 +103,6 @@
       border-bottom: 1px solid rgba(255, 255, 255, .2);
       margin: 1em;
     }
-
-    img { object-fit: contain }
   }
 
   @media screen and (min-width: 50em) {
@@ -130,7 +129,7 @@
   import type { Asset } from "../codegen/types";
   import { querystring } from "svelte-spa-router";
   import Spotlight from "./Spotlight.svelte";
-  import loadable from "../use/loadable";
+  import ImageLoader from "../components/ImageLoader.svelte";
 
   export let params: { uuid?: string } = {};
 
@@ -217,7 +216,7 @@
       {#each items as asset, i (asset.uuid)}
         <figure transition:scale="{{ duration: 350 }}">
           <a href="/#/album/{album.uuid}?{i}">
-            <img use:loadable={{uuid: asset.uuid, variant: "thumb"}} alt=""/>
+            <ImageLoader uuid={asset.uuid} variant="thumb" />
           </a>
         </figure>
       {/each}

@@ -22,8 +22,9 @@ export const getAlbum = `
       photosCount
       videosCount
       assets(offset: $offset, limit: $limit) {
-        id
         uuid
+        width
+        height
       }
     }
   }

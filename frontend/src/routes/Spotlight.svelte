@@ -7,12 +7,34 @@
     bottom: 0;
     left: 0;
     z-index: 5;
+  }
 
-    img {
-      object-fit: contain;
-      width: 100%;
-      height: 100%;
+  .asset {
+    position: fixed;
+    z-index: 6;
+
+    :global(.image-loader) {
+      &.loading {
+        &::after {
+          content: "";
+          position: absolute;
+          bottom: 100px;
+          left: 20px;
+          width: 20px;
+          height: 20px;
+          border-radius: 10px;
+          background: white;
+        }
+      }
     }
+  }
+
+  .film-strip {
+    position: fixed;
+    z-index: 7;
+    left: 0;
+    right: 0;
+    bottom: 0;
 
     ul {
       background: rgba(0,0,0,.9);
@@ -37,16 +59,15 @@
           border-color: red;
         }
 
-        img {
+        :global(img) {
           object-fit: cover;
-          width: 100%;
-          height: 100%;
         }
       }
     }
   }
 
   button {
+    z-index: 8;
     appearance: none;
     border: none;
     background: rgba(255, 255, 255, .15);
@@ -83,13 +104,13 @@
 </style>
 
 <script lang="ts">
-  import loadable from "../use/loadable";
   import { fade, scale } from "svelte/transition";
   import { location, replace } from "svelte-spa-router";
   import type { Asset, Album } from "src/codegen/types";
   import { getAlbum } from "../gql/albums";
   import { operationStore, query } from "@urql/svelte";
   import { onDestroy } from "svelte";
+  import ImageLoader from "../components/ImageLoader.svelte";
 
   export let album: Album;
   export let index: number;
@@ -144,15 +165,36 @@
     }
   }
 
-
   $: currentPage = Math.floor(index / perPage);
   $: currentPageIndex = index % perPage;
   $: hasPrev   = index > 0;
   $: hasNext   = index < album.photosCount + album.videosCount - 1;
   $: cursor    = items.length? (loadedPages.indexOf(currentPage) * perPage) + currentPageIndex : 0;
   $: currAsset = items[cursor];
-  $: {
-    console.log("currentPage, cursor, currentPageIndex, loadedPages", currentPage, cursor, currentPageIndex, loadedPages);
+
+  let viewportHeight: number;
+  let viewportWidth: number;
+  let width  = 0;
+  let height = 0;
+  let left   = 0;
+  let top    = 0;
+
+  $: assetWidth  = currAsset?.width | 0;
+  $: assetHeight = currAsset?.height | 0;
+  $: assetRatio = assetWidth / assetHeight;
+
+  $: dheight = viewportHeight;
+  $: dwidth  = dheight * assetRatio;
+  $: if (dwidth > viewportWidth) {
+    width = viewportWidth;
+    height = viewportWidth / assetRatio;
+    top = viewportHeight / 2 - height / 2;
+    left = 0;
+  } else {
+    height = dheight;
+    width = dwidth;
+    top = 0;
+    left = viewportWidth / 2 - width / 2;
   }
 
   $: if (!$req.fetching && currentPageIndex >= perPage - 2) loadNextPage()
@@ -175,37 +217,44 @@
   }
 </script>
 
-<div class="backdrop" transition:fade={{ duration: 100 }} on:click={() => replace($location)}>
-  {#if currAsset}
-    <img use:loadable={{ uuid: currAsset.uuid, variant: "resized" }}
-         alt={currAsset.uuid}
-         on:click={() => replace($location)} />
+<svelte:window bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
 
-    <ul>
-      {#each items as item}
-        <li class="{currAsset.uuid == item.uuid ? 'selected' : ''}" transition:scale>
-          <img use:loadable={{uuid: item.uuid, variant: "thumb"}} alt={item.uuid}>
-        </li>
-      {/each}
-    </ul>
-  {/if}
+<div class="backdrop" transition:fade={{ duration: 100 }} on:click={() => replace($location)}></div>
+
+{#if currAsset}
+  <div class="asset" style="width: {width}px; height: {height}px; left: {left}px; top: {top}px;">
+    <ImageLoader uuid={currAsset.uuid}
+                 variant="resized"
+                 alt={currAsset.uuid}
+                 on:click={() => replace($location)} />
+  </div>
+{/if}
+
+{#if hasPrev}
+  <button class="prev" on:click|stopPropagation={prev} disabled={$req.fetching}>
+    <svg><use xlink:href="#i-chevron-left"/></svg>
+  </button>
+{/if}
+
+{#if hasNext}
+  <button class="next" on:click|stopPropagation={next} disabled={$req.fetching}>
+    <svg><use xlink:href="#i-chevron-right"/></svg>
+  </button>
+{/if}
 
 
-  {#if hasPrev}
-    <button class="prev" on:click|stopPropagation={prev} disabled={$req.fetching}>
-      <svg><use xlink:href="#i-chevron-left"/></svg>
-    </button>
-  {/if}
-
-  {#if hasNext}
-    <button class="next" on:click|stopPropagation={next} disabled={$req.fetching}>
-      <svg><use xlink:href="#i-chevron-right"/></svg>
-    </button>
-  {/if}
-
+<div class="film-strip">
   {#if $req.error}
     <p class="error">
       😵 {$req.error?.message}
     </p>
   {/if}
+
+  <ul>
+    {#each items as item}
+      <li class="{currAsset.uuid == item.uuid ? 'selected' : ''}" transition:scale>
+        <ImageLoader uuid={item.uuid} variant="thumb" alt={item.uuid} />
+      </li>
+    {/each}
+  </ul>
 </div>
