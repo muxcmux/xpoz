@@ -1,18 +1,16 @@
 mod settings;
+mod services;
 mod db;
 
-use anyhow::{Result, anyhow};
-use actix_files as fs;
-use actix_web::{web, post, get, App, HttpServer, HttpResponse, Result as AWResult, error::ErrorNotFound};
-use actix_web::middleware::{Compress, Logger};
+use anyhow::Result;
+use actix_web::{web, App, HttpServer};
+use actix_web::middleware::{Compress, Logger, DefaultHeaders};
 use actix_cors::Cors;
 use std::env::args;
 use settings::Settings;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use async_graphql::{Schema as AGSchema, EmptyMutation, EmptySubscription};
-use async_graphql_actix_web::{Request, Response};
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-use db::{Schema, QueryRoot, assets::asset, entities::{entities, Entity}};
+use db::{QueryRoot, entities::{entities, Entity}};
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -40,44 +38,6 @@ async fn configure() -> (Settings, SqlitePool, Vec<Entity>) {
 }
 
 
-#[post("/api")]
-async fn api(schema: web::Data<Schema>, req: Request) -> Response {
-    // std::thread::sleep_ms(1000);
-    schema.execute(req.into_inner()).await.into()
-}
-
-#[get("/api")]
-async fn graphiql() -> AWResult<HttpResponse> {
-    Ok(HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(playground_source(
-            GraphQLPlaygroundConfig::new("/api").subscription_endpoint("/api"),
-        )))
-}
-
-#[get("/asset/{variant}/{uuid}")]
-async fn get_asset(
-    web::Path((variant, uuid)): web::Path<(String, String)>,
-    settings: web::Data<Settings>,
-    pool: web::Data<SqlitePool>
-) -> AWResult<fs::NamedFile> {
-    let settings = settings.into_inner();
-    let pool = pool.into_inner();
-    match asset(&pool, &uuid).await.map_err(|e| ErrorNotFound(e))? {
-        Some(asset) => {
-            let file = match variant.as_str() {
-                "thumb" => asset.thumb(&settings),
-                "render" => asset.render(&settings),
-                "resized" => asset.resized(&settings),
-                _ => asset.original(&settings),
-            };
-
-            Ok(file.map_err(|e| ErrorNotFound(e))?)
-        },
-        None => Err(ErrorNotFound(anyhow!("The requested asset was not found")))
-    }
-}
-
 async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) -> Result<()> {
     let address = settings.server.address.clone();
     let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
@@ -96,9 +56,12 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
             .data(schema.clone())
             .wrap(Logger::default())
             .wrap(Compress::default())
-            .service(api)
-            .service(graphiql)
-            .service(get_asset)
+            .service(
+                web::scope("/asset")
+                    .wrap(DefaultHeaders::new().header("cache-control", "max-age=86400"))
+                    .configure(services::files::config)
+            )
+            .configure(services::graphql::config)
     })
     .bind(address)?
     .run()
