@@ -19,7 +19,7 @@
 
 <div class="image-loader {state}">
   {#if src}
-    <img {src} {alt} transition:fade="{{ duration: 350 }}" />
+    <img {src} {alt} transition:fade="{{ duration: 150 }}" />
   {/if}
 </div>
 

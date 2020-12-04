@@ -8,6 +8,7 @@
   "dependencies": {
     "@urql/svelte": "^1.1.3",
     "graphql": "^15.4.0",
+    "hammerjs": "^2.0.8",
     "svelte": "^3.24.0",
     "svelte-spa-router": "^3.0.5",
     "urql": "^1.11.2"
@@ -23,6 +24,7 @@
     "@snowpack/web-test-runner-plugin": "^0.1.4",
     "@testing-library/svelte": "^3.0.0",
     "@types/chai": "^4.2.13",
+    "@types/hammerjs": "^2.0.36",
     "@types/snowpack-env": "^2.3.2",
     "@web/test-runner": "^0.9.7",
     "chai": "^4.2.0",

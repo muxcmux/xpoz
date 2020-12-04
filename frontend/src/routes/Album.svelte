@@ -123,20 +123,21 @@
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
   import { scale, fly } from "svelte/transition";
-  import { onMount, tick } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
   import { getAlbum } from "../gql/albums";
   import { operationStore, query } from "@urql/svelte";
   import type { Asset } from "../codegen/types";
   import { querystring } from "svelte-spa-router";
   import Spotlight from "./Spotlight.svelte";
   import ImageLoader from "../components/ImageLoader.svelte";
+  import { Gallery } from "../lib/gallery";
 
   export let params: { uuid?: string } = {};
 
   let page = 0;
   // Decide on page size at init by working out the
   // optimal number of items based on screen size
-  const perPage = 6;
+  const perPage = 10;
 
   const req = operationStore(getAlbum, {
     uuid: params.uuid,
@@ -151,7 +152,11 @@
     observer.observe(document.getElementById("load-more-photos")!);
   });
 
-  let items: Asset[] = [];
+  onDestroy(() => {
+    observer.unobserve(document.getElementById("load-more-photos")!);
+  })
+
+  let gallery = new Gallery();
   let hasMore = true;
 
   $: $req.variables!.offset = page * perPage;
@@ -162,12 +167,8 @@
 
   function insertNewItems() {
     let fetched = $req.data.album.assets as Asset[];
-    let add: Asset[] = [];
-    fetched.forEach((asset) => {
-      if (!items.includes(asset)) add.push(asset);
-    })
-    items = [...items, ...add];
-    if (items.length >= album.photosCount + album.videosCount || !fetched.length) {
+    gallery = gallery.append(fetched);
+    if (gallery.size() >= album.photosCount + album.videosCount || !fetched.length) {
       hasMore = false;
     }
     tick().then(() => {
@@ -189,7 +190,7 @@
   }
 </script>
 
-{#if album && items && index >= 0}
+{#if album && !gallery.isEmpty() && index >= 0}
   <Spotlight {album} {index} {perPage}/>
 {/if}
 
@@ -213,10 +214,10 @@
     </header>
 
     <div class="results">
-      {#each items as asset, i (asset.uuid)}
+      {#each gallery.items as item, i (item.uuid)}
         <figure transition:scale="{{ duration: 350 }}">
           <a href="/#/album/{album.uuid}?{i}">
-            <ImageLoader uuid={asset.uuid} variant="thumb" />
+            <ImageLoader uuid={item.uuid} variant="thumb" />
           </a>
         </figure>
       {/each}
