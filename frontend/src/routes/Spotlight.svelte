@@ -182,8 +182,8 @@
   let gallery = new Gallery();
   let seeded = false;
   let items: {[key: string]: GalleryItem | null} = {
-    second: null,
     first: null,
+    second: null,
     third: null,
   }
 
@@ -276,67 +276,69 @@
 
   let viewportHeight: number;
   let viewportWidth: number;
-  let width      = 0;
-  let height     = 0;
-  let left       = 0;
-  let top        = 0;
-  let prevWidth  = 0;
-  let prevHeight = 0;
-  let prevLeft   = 0;
-  let prevTop    = 0;
-  let nextWidth  = 0;
-  let nextHeight = 0;
-  let nextLeft   = 0;
-  let nextTop    = 0;
+  let firstWidth   = 0;
+  let firstHeight  = 0;
+  let firstLeft    = 0;
+  let firstTop     = 0;
+  let secondWidth  = 0;
+  let secondHeight = 0;
+  let secondLeft   = 0;
+  let secondTop    = 0;
+  let thirdWidth   = 0;
+  let thirdHeight  = 0;
+  let thirdLeft    = 0;
+  let thirdTop     = 0;
 
-  $: assetWidth  = items.second?.asset.width || 0;
-  $: assetHeight = items.second?.asset.height || 0;
-  $: assetRatio = assetWidth / assetHeight;
-  $: prevAssetWidth  = items.first?.asset.width || 0;
-  $: prevAssetHeight = items.first?.asset.height || 0;
-  $: prevAssetRatio = prevAssetWidth / prevAssetHeight;
-  $: nextAssetWidth  = items.third?.asset.width || 0;
-  $: nextAssetHeight = items.third?.asset.height || 0;
-  $: nextAssetRatio = nextAssetWidth / nextAssetHeight;
+  $: firstAssetWidth   = items.first?.asset.width || 0;
+  $: firstAssetHeight  = items.first?.asset.height || 0;
+  $: firstAssetRatio   = firstAssetWidth / firstAssetHeight;
+  $: secondAssetWidth  = items.second?.asset.width || 0;
+  $: secondAssetHeight = items.second?.asset.height || 0;
+  $: secondAssetRatio  = secondAssetWidth / secondAssetHeight;
+  $: thirdAssetWidth   = items.third?.asset.width || 0;
+  $: thirdAssetHeight  = items.third?.asset.height || 0;
+  $: thirdAssetRatio   = thirdAssetWidth / thirdAssetHeight;
 
-  $: dheight = viewportHeight;
-  $: dwidth  = dheight * assetRatio;
-  $: if (dwidth > viewportWidth) {
-    width = viewportWidth;
-    height = viewportWidth / assetRatio;
-    top = viewportHeight / 2 - height / 2;
-    left = 0;
+  $: firstAssetDesiredHeight = viewportHeight;
+  $: firstAssetDesiredWidth  = firstAssetDesiredHeight * firstAssetRatio;
+  $: if (firstAssetDesiredWidth > viewportWidth) {
+    firstWidth = viewportWidth;
+    firstHeight = viewportWidth / firstAssetRatio;
+    firstTop = viewportHeight / 2 - firstHeight / 2;
+    firstLeft = 0;
   } else {
-    height = dheight;
-    width = dwidth;
-    top = 0;
-    left = viewportWidth / 2 - width / 2;
+    firstHeight = firstAssetDesiredHeight;
+    firstWidth = firstAssetDesiredWidth;
+    firstTop = 0;
+    firstLeft = viewportWidth / 2 - firstWidth / 2;
   }
-  $: pdheight = viewportHeight;
-  $: pdwidth  = pdheight * prevAssetRatio;
-  $: if (pdwidth > viewportWidth) {
-    prevWidth = viewportWidth;
-    prevHeight = viewportWidth / prevAssetRatio;
-    prevTop = viewportHeight / 2 - prevHeight / 2;
-    prevLeft = 0;
+
+  $: secondAssetDesiredHeight = viewportHeight;
+  $: secondAssetDesiredWidth  = secondAssetDesiredHeight * secondAssetRatio;
+  $: if (secondAssetDesiredWidth > viewportWidth) {
+    secondWidth = viewportWidth;
+    secondHeight = viewportWidth / secondAssetRatio;
+    secondTop = viewportHeight / 2 - secondHeight / 2;
+    secondLeft = 0;
   } else {
-    prevHeight = pdheight;
-    prevWidth = pdwidth;
-    prevTop = 0;
-    prevLeft = viewportWidth / 2 - prevWidth / 2;
+    secondHeight = secondAssetDesiredHeight;
+    secondWidth = secondAssetDesiredWidth;
+    secondTop = 0;
+    secondLeft = viewportWidth / 2 - firstWidth / 2;
   }
-  $: ndheight = viewportHeight;
-  $: ndwidth  = ndheight * nextAssetRatio;
-  $: if (ndwidth > viewportWidth) {
-    nextWidth = viewportWidth;
-    nextHeight = viewportWidth / nextAssetRatio;
-    nextTop = viewportHeight / 2 - nextHeight / 2;
-    nextLeft = 0;
+
+  $: thirdAssetDesiredHeight = viewportHeight;
+  $: thirdAssetDesiredWidth  = thirdAssetDesiredHeight * thirdAssetRatio;
+  $: if (thirdAssetDesiredWidth > viewportWidth) {
+    thirdWidth = viewportWidth;
+    thirdHeight = viewportWidth / thirdAssetRatio;
+    thirdTop = viewportHeight / 2 - thirdHeight / 2;
+    thirdLeft = 0;
   } else {
-    nextHeight = ndheight;
-    nextWidth = ndwidth;
-    nextTop = 0;
-    nextLeft = viewportWidth / 2 - nextWidth / 2;
+    thirdHeight = thirdAssetDesiredHeight;
+    thirdWidth = thirdAssetDesiredWidth;
+    thirdTop = 0;
+    thirdLeft = viewportWidth / 2 - thirdWidth / 2;
   }
 
   let panning: "vertical" | "horizontal" | null;
@@ -406,11 +408,11 @@
 
       {#if items.first}
         <div class="asset no-transition"
-            style="width: {prevWidth}px;
-                    height: {prevHeight}px;
-                    left: {prevLeft}px;
-                    top: {prevTop}px;
-                    transform: translate3d({firstX}px, {currY}px, 0px)">
+             style="width: {firstWidth}px;
+                    height: {firstHeight}px;
+                    left: {firstLeft}px;
+                    top: {firstTop}px;
+                    transform: translate3d({firstX}px, {currY}px, 0px) scale({scaling})">
 
           <ImageLoader uuid={items.first.uuid}
                       variant="resized"
@@ -420,10 +422,10 @@
 
       {#if items.second}
         <div class="asset no-transition"
-            style="width: {width}px;
-                    height: {height}px;
-                    left: {left}px;
-                    top: {top}px;
+            style="width: {secondWidth}px;
+                    height: {secondHeight}px;
+                    left: {secondLeft}px;
+                    top: {secondTop}px;
                     transform: translate3d({secondX}px, {currY}px, 0px) scale({scaling})">
 
           <ImageLoader uuid={items.second.uuid}
@@ -435,11 +437,11 @@
 
       {#if items.third}
         <div class="asset no-transition"
-            style="width: {nextWidth}px;
-                    height: {nextHeight}px;
-                    left: {nextLeft}px;
-                    top: {nextTop}px;
-                    transform: translate3d({thirdX}px, {currY}px, 0px)">
+            style="width: {thirdWidth}px;
+                    height: {thirdHeight}px;
+                    left: {thirdLeft}px;
+                    top: {thirdTop}px;
+                    transform: translate3d({thirdX}px, {currY}px, 0px) scale({scaling})">
 
           <ImageLoader uuid={items.third.uuid}
                       variant="resized"
