@@ -180,8 +180,13 @@
   let loadedPages = [loadPage];
   let lastPage = Math.floor((album.photosCount + album.videosCount) / perPage);
   let gallery = new Gallery();
-  let seeded = false;
-  let items: {[key: string]: GalleryItem | null} = {
+  let itemInSpotlight: GalleryItem | null = null;
+  const seeded = {
+    first: false,
+    second: false,
+    third: false,
+  }
+  const items: {[key: string]: GalleryItem | null} = {
     first: null,
     second: null,
     third: null,
@@ -204,11 +209,39 @@
       gallery = gallery.prepend(fetched);
       if (!loadedPages.includes(loadPage)) loadedPages = [loadPage, ...loadedPages];
     }
-    if (!seeded && fetched.length) {
-      items.second = gallery.items[index % perPage];
-      items.third = items.second.next;
-      items.first = items.second.prev;
-      seeded = true;
+
+    if (fetched.length) {
+      let cp = Math.floor(index / perPage);
+      let cpi = index % perPage;
+      let cursor = loadedPages.indexOf(cp) * perPage + cpi;
+
+      if (!seeded.second) {
+        items.second = gallery.items[cursor];
+        itemInSpotlight = items.second;
+        seeded.second = true;
+
+        if (items.second.prev) {
+          items.first = items.second.prev;
+          seeded.first = true;
+        }
+
+        if (items.second.next) {
+          items.third = items.second.next;
+          seeded.third = true;
+        }
+      }
+
+      // seeding the first item didn't work with the first page
+      if (!seeded.first && cursor > 0 && gallery.size() > perPage) {
+        items.first = gallery.items[cursor - 1];
+        seeded.first = true;
+      }
+
+      // seeding the third item did't with the first page
+      if (!seeded.third && index < album.photosCount + album.videosCount - 1 && gallery.size() > perPage) {
+        items.third = gallery.items[cursor + 1];
+        seeded.third = true;
+      }
     }
   });
 
@@ -220,14 +253,17 @@
     if (swipes % 3 == -1 || swipes % 3 == 2) {
       firstItemJumps += 1;
       items.first = items.third?.next || null;
+      itemInSpotlight = items.third;
     }
     if (swipes % 3 == -2 || swipes % 3 == 1) {
       secondItemJumps += 1;
       items.second = items.first?.next || null;
+      itemInSpotlight = items.first;
     }
     if (swipes % 3 == 0) {
       thirdItemJumps += 1;
       items.third = items.second?.next || null;
+      itemInSpotlight = items.second;
     }
     replace(`${$location}?${index + 1}`);
   }
@@ -238,14 +274,17 @@
     if (swipes % 3 == 1 || swipes % 3 == -2) {
       thirdItemJumps -= 1;
       items.third = items.first?.prev || null;
+      itemInSpotlight = items.first;
     }
     if (swipes % 3 == 2 || swipes % 3 == - 1) {
       secondItemJumps -= 1;
       items.second = items.third?.prev || null;
+      itemInSpotlight = items.third;
     }
     if (swipes % 3 == 0) {
       firstItemJumps -= 1;
       items.first = items.second?.prev || null;
+      itemInSpotlight = items.second;
     }
     replace(`${$location}?${index - 1}`);
   }
@@ -324,7 +363,7 @@
     secondHeight = secondAssetDesiredHeight;
     secondWidth = secondAssetDesiredWidth;
     secondTop = 0;
-    secondLeft = viewportWidth / 2 - firstWidth / 2;
+    secondLeft = viewportWidth / 2 - secondWidth / 2;
   }
 
   $: thirdAssetDesiredHeight = viewportHeight;
@@ -345,7 +384,7 @@
   let backdropOpacity = 1;
   let moveX = 0;
   let currY = 0;
-  let secondXOffset = 0;
+  let xOffset = 0;
   let firstItemJumps = 0;
   let thirdItemJumps = 0;
   let secondItemJumps = 0;
@@ -386,15 +425,16 @@
       currY = e.detail.deltaY * damping;
       backdropOpacity = 1 - (Math.abs(e.detail.deltaY) * damping) / viewportHeight;
       scaling = 1 - (Math.abs(e.detail.distance) * damping) / Math.sqrt((viewportHeight ** 2) + (viewportWidth ** 2));
-      secondXOffset = e.detail.deltaX * damping;
+      // xOffset = e.detail.deltaX * damping;
     } else {
       moveX = swipes * (viewportWidth + spacing) + e.detail.deltaX * damping;
     }
   }
 
-  $: firstX = (-viewportWidth - spacing) + firstItemJumps * (3 * (viewportWidth + spacing));
-  $: thirdX = (viewportWidth + spacing) + thirdItemJumps * (3 * (viewportWidth + spacing));
-  $: secondX = (secondItemJumps * (3 * (viewportWidth + spacing))) + secondXOffset;
+  $: firstX = (-viewportWidth - spacing) + firstItemJumps * (3 * (viewportWidth + spacing)) + xOffset;
+  $: thirdX = (viewportWidth + spacing) + thirdItemJumps * (3 * (viewportWidth + spacing)) + xOffset;
+  $: secondX = (secondItemJumps * (3 * (viewportWidth + spacing))) + xOffset;
+
 </script>
 
 <svelte:window bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
@@ -460,7 +500,7 @@
 
     <ul>
       {#each gallery.items as item}
-        <li class="{items.second?.uuid == item.uuid ? 'selected' : ''}" transition:scale>
+        <li class="{itemInSpotlight?.uuid == item.uuid ? 'selected' : ''}" transition:scale>
           <ImageLoader uuid={item.uuid} variant="thumb" alt={item.uuid} />
         </li>
       {/each}
