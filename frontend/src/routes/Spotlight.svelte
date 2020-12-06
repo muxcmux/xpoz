@@ -250,15 +250,15 @@
   function next() {
     swipes -= 1;
     moveX = swipes * (viewportWidth + spacing);
-    if (swipes % 3 == -1 || swipes % 3 == 2) {
-      firstItemJumps += 1;
-      items.first = items.third?.next || null;
-      itemInSpotlight = items.third;
-    }
-    if (swipes % 3 == -2 || swipes % 3 == 1) {
+    if (swipes % 3 == 1 || swipes % 3 == -2) {
       secondItemJumps += 1;
       items.second = items.first?.next || null;
       itemInSpotlight = items.first;
+    }
+    if (swipes % 3 == 2 || swipes % 3 == -1) {
+      firstItemJumps += 1;
+      items.first = items.third?.next || null;
+      itemInSpotlight = items.third;
     }
     if (swipes % 3 == 0) {
       thirdItemJumps += 1;
@@ -439,7 +439,7 @@
 
 <svelte:window bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
 
-<div class="spotlight" transition:fade={{ duration: 150 }}>
+<div class="spotlight" in:fade={{ duration: 150 }}>
   <div class="backdrop {panning == "vertical" ? 'no-transition' : ''}" style="opacity: {backdropOpacity}" on:click={() => replace($location)}></div>
 
   <div class="swiper" use:touch on:panmove={move} on:panend={stopMoving}>
@@ -491,7 +491,7 @@
     </div>
   </div>
 
-  <div class="film-strip" transition:fly={{ y: 60, duration: 500}}>
+  <div class="film-strip" in:fly={{ y: 60, duration: 500}}>
     {#if $req.error}
       <p class="error">
         😵 {$req.error?.message}
@@ -500,7 +500,7 @@
 
     <ul>
       {#each gallery.items as item}
-        <li class="{itemInSpotlight?.uuid == item.uuid ? 'selected' : ''}" transition:scale>
+        <li class="{itemInSpotlight?.uuid == item.uuid ? 'selected' : ''}" in:scale>
           <ImageLoader uuid={item.uuid} variant="thumb" alt={item.uuid} />
         </li>
       {/each}

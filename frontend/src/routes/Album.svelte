@@ -135,7 +135,6 @@
   export let params: { uuid?: string } = {};
 
   let infiniteScroll: HTMLElement;
-  let page = 0;
   let gallery = new Gallery();
   let hasMore = true;
 
@@ -151,7 +150,7 @@
 
   query(req);
 
-  const unsubscribe = req.subscribe(value => {
+  const unsubscribe = req.subscribe(async value => {
     let fetched = value.data?.album?.assets as Asset[];
     let album = value.data?.album as Album;
     if (album) {
@@ -159,6 +158,7 @@
       if (gallery.size() >= album.photosCount + album.videosCount || !fetched.length) {
         hasMore = false;
       }
+      await tick();
       if (isVisible(infiniteScroll)) loadMore();
     }
   });
@@ -173,7 +173,6 @@
     }
   });
 
-  $: $req.variables!.offset = page * perPage;
   $: index = parseInt($querystring!);
   $: album = $req.data?.album;
 
@@ -187,7 +186,7 @@
   }
 
   function loadMore() {
-    if (!$req.fetching && hasMore) page += 1;
+    if (!$req.fetching && hasMore) $req.variables!.offset += perPage;
   }
 </script>
 
@@ -197,7 +196,7 @@
 
 <section class="page">
   {#if album}
-    <header transition:fly="{{ x: -40, duration: 400 }}">
+    <header in:fly="{{ x: -40, duration: 400 }}">
       <h1>
         <a href="/#/" title="Back to albums">
           <svg><use xlink:href="#i-chevron-left"/></svg>
@@ -216,7 +215,7 @@
 
     <div class="results">
       {#each gallery.items as item, i (item.uuid)}
-        <figure transition:scale="{{ duration: 350 }}">
+        <figure in:scale="{{ duration: 350 }}">
           <a href="/#/album/{album.uuid}?{i}">
             <ImageLoader uuid={item.uuid} variant="thumb" />
           </a>
@@ -225,7 +224,7 @@
     </div>
   {/if}
 
-  <div class="load-more" bind:this={infiniteScroll} transition:scale="{{ duration: 250 }}">
+  <div class="load-more" bind:this={infiniteScroll}>
     {#if $req.fetching}
       <p>💭</p>
     {:else if $req.error}
@@ -233,7 +232,7 @@
         😵 {$req.error?.message}
       </p>
     {:else if !hasMore}
-      <p>🥳</p>
+      <p>~</p>
     {/if}
   </div>
 </section>

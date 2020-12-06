@@ -85,7 +85,7 @@
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
   import { scale } from "svelte/transition";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { getMyAlbums } from "../gql/albums";
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
@@ -98,11 +98,12 @@
 
   query(request);
 
-  const unsubscribe = request.subscribe(value => {
+  const unsubscribe = request.subscribe(async value => {
     let fetched = value.data?.myAlbums as Album[];
     if (fetched) {
       gallery = gallery.append(fetched);
       if (fetched?.length < 10) hasMore = false;
+      await tick();
       if (isVisible(infiniteScroll)) loadMore();
     }
   });
@@ -134,7 +135,7 @@
 <section class="page">
   <div class="results">
     {#each gallery.items as item (item.uuid)}
-      <a href="/#/album/{item.asset.uuid}" transition:scale="{{ duration: 350}}">
+      <a href="/#/album/{item.asset.uuid}" in:scale="{{ duration: 350}}">
         <figure>
           {#if item.asset.keyAssets[0]}
             <img src="http://192.168.1.2:1234/asset/thumb/{item.asset.keyAssets[0].uuid}" alt="{item.asset.title || "Album title"}">
@@ -157,7 +158,7 @@
     {/each}
   </div>
 
-  <div class="load-more" bind:this={infiniteScroll} transition:scale="{{ duration: 250 }}">
+  <div class="load-more" bind:this={infiniteScroll}>
     {#if $request.fetching}
       <p>💭</p>
     {:else if $request.error}
@@ -165,7 +166,7 @@
         😵 {$request.error?.message}
       </p>
     {:else if !hasMore}
-      <p>🥳</p>
+      <p>~</p>
     {/if}
   </div>
 </section>
