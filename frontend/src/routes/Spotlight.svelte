@@ -391,8 +391,7 @@
   let swipes = 0;
   let scaling = 1;
   const spacing = 20;
-  const damping = 0.7;
-  const animationLength = 600;
+  const damping = 0.8;
   $: panThresholdForChange = viewportWidth / 4;
 
   function stopMoving(e: CustomEvent) {

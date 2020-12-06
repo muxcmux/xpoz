@@ -15,7 +15,7 @@
         width: 100%;
         height: 100%;
 
-        img {
+        :global(.image-loader img) {
           transition: transform .5s cubic-bezier(0.215, 0.610, 0.355, 1);
           object-fit: cover;
           width: 100%;
@@ -24,7 +24,7 @@
 
         figcaption {
           transition: background-color .5s cubic-bezier(0.215, 0.610, 0.355, 1);
-          background-color: rgba(0, 0, 0, .4);
+          background-color: rgba(0, 0, 0, .5);
           position: absolute;
           z-index: 2;
           color: white;
@@ -60,7 +60,7 @@
         }
 
         &:hover {
-          img { transform: scale(1.2) }
+          :global(img) { transform: scale(1.2) }
           figcaption { background-color: rgba(0, 0, 0, 0) }
         }
       }
@@ -90,6 +90,7 @@
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
   import { Gallery } from "../lib/gallery";
+  import ImageLoader from "../components/ImageLoader.svelte";
 
   let infiniteScroll: HTMLElement;
   const request = operationStore(getMyAlbums, { page: 0 });
@@ -138,7 +139,7 @@
       <a href="/#/album/{item.asset.uuid}" in:scale="{{ duration: 350}}">
         <figure>
           {#if item.asset.keyAssets[0]}
-            <img src="http://192.168.1.2:1234/asset/thumb/{item.asset.keyAssets[0].uuid}" alt="{item.asset.title || "Album title"}">
+            <ImageLoader uuid={item.asset.keyAssets[0].uuid} variant="thumb" alt={item.asset.title || "Album title"} />
           {/if}
           <figcaption>
             {item.asset.title}
