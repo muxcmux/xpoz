@@ -89,30 +89,33 @@
   import { getMyAlbums } from "../gql/albums";
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
+  import { Gallery } from "../lib/gallery";
 
   let infiniteScroll: HTMLElement;
   const request = operationStore(getMyAlbums, { page: 0 });
+  let gallery = new Gallery<Album>();
+  let hasMore = true;
 
   query(request);
+
+  const unsubscribe = request.subscribe(value => {
+    let fetched = value.data?.myAlbums as Album[];
+    if (fetched) {
+      gallery = gallery.append(fetched);
+      if (fetched?.length < 10) hasMore = false;
+      if (isVisible(infiniteScroll)) loadMore();
+    }
+  });
 
   onMount(() => {
     window.scrollTo(0, 0);
     observer.observe(infiniteScroll);
 
-    return () => observer.unobserve(infiniteScroll)
+    return () => {
+      observer.unobserve(infiniteScroll);
+      unsubscribe();
+    }
   });
-
-  let albums: Album[] = [];
-  let hasMore = true;
-
-  $: if (!$request.fetching && $request.data?.myAlbums) insertNewItems();
-
-  function insertNewItems() {
-    let add = $request.data?.myAlbums;
-    albums = [...albums, ...add];
-    if ($request.data.myAlbums.length < 10) hasMore = false;
-    if (isVisible(document.getElementById("load-more-albums"))) loadMore();
-  }
 
   let observer = new IntersectionObserver(onEndOfList, {
     root: null,
@@ -130,22 +133,22 @@
 
 <section class="page">
   <div class="results">
-    {#each albums as album (album.uuid)}
-      <a href="/#/album/{album.uuid}" transition:scale="{{ duration: 350}}">
+    {#each gallery.items as item (item.uuid)}
+      <a href="/#/album/{item.asset.uuid}" transition:scale="{{ duration: 350}}">
         <figure>
-          {#if album.keyAssets[0]}
-            <img src="http://192.168.1.2:1234/asset/thumb/{album.keyAssets[0].uuid}" alt="{album.title || "Album title"}">
+          {#if item.asset.keyAssets[0]}
+            <img src="http://192.168.1.2:1234/asset/thumb/{item.asset.keyAssets[0].uuid}" alt="{item.asset.title || "Album title"}">
           {/if}
           <figcaption>
-            {album.title}
+            {item.asset.title}
             <div>
-              {#if album.photosCount > 0}
+              {#if item.asset.photosCount > 0}
                 <svg><use xlink:href="#i-camera"/></svg>
-                <span>{album.photosCount.toLocaleString()}</span>
+                <span>{item.asset.photosCount.toLocaleString()}</span>
               {/if}
-              {#if album.videosCount > 0}
+              {#if item.asset.videosCount > 0}
                 <svg><use xlink:href="#i-video"/></svg>
-                <span>{album.videosCount}</span>
+                <span>{item.asset.videosCount}</span>
               {/if}
             </div>
           </figcaption>

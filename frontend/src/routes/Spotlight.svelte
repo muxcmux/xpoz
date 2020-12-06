@@ -179,14 +179,14 @@
   let loadPage = Math.floor(index / perPage);
   let loadedPages = [loadPage];
   let lastPage = Math.floor((album.photosCount + album.videosCount) / perPage);
-  let gallery = new Gallery();
-  let itemInSpotlight: GalleryItem | null = null;
+  let gallery = new Gallery<Asset>();
+  let itemInSpotlight: GalleryItem<Asset> | null = null;
   const seeded = {
     first: false,
     second: false,
     third: false,
   }
-  const items: {[key: string]: GalleryItem | null} = {
+  const items: {[key: string]: GalleryItem<Asset> | null} = {
     first: null,
     second: null,
     third: null,

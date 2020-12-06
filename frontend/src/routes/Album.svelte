@@ -126,7 +126,7 @@
   import { onMount, tick } from "svelte";
   import { getAlbum } from "../gql/albums";
   import { operationStore, query } from "@urql/svelte";
-  import type { Asset } from "../codegen/types";
+  import type { Asset, Album } from "../codegen/types";
   import { querystring } from "svelte-spa-router";
   import Spotlight from "./Spotlight.svelte";
   import ImageLoader from "../components/ImageLoader.svelte";
@@ -136,6 +136,9 @@
 
   let infiniteScroll: HTMLElement;
   let page = 0;
+  let gallery = new Gallery();
+  let hasMore = true;
+
   // Decide on page size at init by working out the
   // optimal number of items based on screen size
   const perPage = 10;
@@ -148,32 +151,31 @@
 
   query(req);
 
+  const unsubscribe = req.subscribe(value => {
+    let fetched = value.data?.album?.assets as Asset[];
+    let album = value.data?.album as Album;
+    if (album) {
+      gallery = gallery.append(fetched);
+      if (gallery.size() >= album.photosCount + album.videosCount || !fetched.length) {
+        hasMore = false;
+      }
+      if (isVisible(infiniteScroll)) loadMore();
+    }
+  });
+
   onMount(() => {
     window.scrollTo(0, 0);
     observer.observe(infiniteScroll);
 
-    return () => observer.unobserve(infiniteScroll)
+    return () => {
+      observer.unobserve(infiniteScroll);
+      unsubscribe();
+    }
   });
-
-  let gallery = new Gallery();
-  let hasMore = true;
 
   $: $req.variables!.offset = page * perPage;
   $: index = parseInt($querystring!);
   $: album = $req.data?.album;
-
-  $: if (!$req.fetching && $req.data?.album) insertNewItems();
-
-  function insertNewItems() {
-    let fetched = $req.data.album.assets as Asset[];
-    gallery = gallery.append(fetched);
-    if (gallery.size() >= album.photosCount + album.videosCount || !fetched.length) {
-      hasMore = false;
-    }
-    tick().then(() => {
-      if (isVisible(document.getElementById("load-more-photos"))) loadMore();
-    })
-  }
 
   let observer = new IntersectionObserver(onEndOfList, {
     root: null,

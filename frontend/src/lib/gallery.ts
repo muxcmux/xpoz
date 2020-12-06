@@ -1,13 +1,15 @@
-import type { Asset } from "../codegen/types";
+interface Identifiable {
+  uuid: string;
+}
 
-export class Gallery {
-  public items: GalleryItem[];
+export class Gallery<T extends Identifiable> {
+  public items: GalleryItem<T>[];
 
   constructor() {
     this.items = [];
   }
 
-  append(assets: Asset[]): Gallery {
+  append(assets: T[]): Gallery<T> {
     for (let i = 0; i < assets.length; i++) {
       const asset = assets[i];
       if (!this.exists(asset.uuid)) {
@@ -23,7 +25,7 @@ export class Gallery {
     return this;
   }
 
-  prepend(assets: Asset[]): Gallery {
+  prepend(assets: T[]): Gallery<T> {
     for (let i = assets.length - 1; i >= 0; i--) {
       const asset = assets[i];
       if (!this.exists(asset.uuid)) {
@@ -52,13 +54,13 @@ export class Gallery {
   }
 }
 
-export class GalleryItem {
-  public asset: Asset;
+export class GalleryItem<T extends Identifiable> {
+  public asset: T;
   public uuid: string;
-  public next: GalleryItem | null = null;
-  public prev: GalleryItem | null = null;
+  public next: GalleryItem<T> | null = null;
+  public prev: GalleryItem<T> | null = null;
 
-  constructor(asset: Asset) {
+  constructor(asset: T) {
     this.asset = asset;
     this.uuid = asset.uuid;
   }
