@@ -123,7 +123,7 @@
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
   import { scale, fly } from "svelte/transition";
-  import { onDestroy, onMount, tick } from "svelte";
+  import { onMount, tick } from "svelte";
   import { getAlbum } from "../gql/albums";
   import { operationStore, query } from "@urql/svelte";
   import type { Asset } from "../codegen/types";
@@ -134,6 +134,7 @@
 
   export let params: { uuid?: string } = {};
 
+  let infiniteScroll: HTMLElement;
   let page = 0;
   // Decide on page size at init by working out the
   // optimal number of items based on screen size
@@ -149,12 +150,10 @@
 
   onMount(() => {
     window.scrollTo(0, 0);
-    observer.observe(document.getElementById("load-more-photos")!);
-  });
+    observer.observe(infiniteScroll);
 
-  onDestroy(() => {
-    observer.unobserve(document.getElementById("load-more-photos")!);
-  })
+    return () => observer.unobserve(infiniteScroll)
+  });
 
   let gallery = new Gallery();
   let hasMore = true;
@@ -224,7 +223,7 @@
     </div>
   {/if}
 
-  <div class="load-more" id="load-more-photos" transition:scale="{{ duration: 250 }}">
+  <div class="load-more" bind:this={infiniteScroll} transition:scale="{{ duration: 250 }}">
     {#if $req.fetching}
       <p>💭</p>
     {:else if $req.error}

@@ -90,13 +90,16 @@
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
 
+  let infiniteScroll: HTMLElement;
   const request = operationStore(getMyAlbums, { page: 0 });
 
   query(request);
 
   onMount(() => {
     window.scrollTo(0, 0);
-    observer.observe(document.getElementById("load-more-albums")!);
+    observer.observe(infiniteScroll);
+
+    return () => observer.unobserve(infiniteScroll)
   });
 
   let albums: Album[] = [];
@@ -151,7 +154,7 @@
     {/each}
   </div>
 
-  <div class="load-more" id="load-more-albums" transition:scale="{{ duration: 250 }}">
+  <div class="load-more" bind:this={infiniteScroll} transition:scale="{{ duration: 250 }}">
     {#if $request.fetching}
       <p>💭</p>
     {:else if $request.error}
