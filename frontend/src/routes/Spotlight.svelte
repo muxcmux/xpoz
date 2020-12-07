@@ -20,21 +20,17 @@
 
   .swiper {
     overflow: hidden;
+    perspective: 70em;
     z-index: 6;
   }
 
   .assets {
     position: absolute;
-    transition: .6s transform cubic-bezier(0.215, 0.610, 0.355, 1);
+    transition: .6s transform cubic-bezier(0.215, 0.610, 0.355, 1), .6s opacity cubic-bezier(0.215, 0.610, 0.355, 1);
   }
 
   .asset {
     position: fixed;
-    transition: .6s transform cubic-bezier(0.215, 0.610, 0.355, 1);
-
-    &.no-transition {
-      transition: none;
-    }
 
     :global(.image-loader) {
       &.loading {
@@ -157,7 +153,7 @@
 
 <script lang="ts">
   import { fade, scale, fly } from "svelte/transition";
-  import { location, replace } from "svelte-spa-router";
+  import { location, replace, pop } from "svelte-spa-router";
   import type { Asset, Album } from "src/codegen/types";
   import { getAlbum } from "../gql/albums";
   import { operationStore, query } from "@urql/svelte";
@@ -246,48 +242,6 @@
   });
 
   onDestroy(unsubscribe);
-
-  function next() {
-    swipes -= 1;
-    moveX = swipes * (viewportWidth + spacing);
-    if (swipes % 3 == 1 || swipes % 3 == -2) {
-      secondItemJumps += 1;
-      items.second = items.first?.next || null;
-      itemInSpotlight = items.first;
-    }
-    if (swipes % 3 == 2 || swipes % 3 == -1) {
-      firstItemJumps += 1;
-      items.first = items.third?.next || null;
-      itemInSpotlight = items.third;
-    }
-    if (swipes % 3 == 0) {
-      thirdItemJumps += 1;
-      items.third = items.second?.next || null;
-      itemInSpotlight = items.second;
-    }
-    replace(`${$location}?${index + 1}`);
-  }
-
-  function prev() {
-    swipes += 1;
-    moveX = swipes * (viewportWidth + spacing);
-    if (swipes % 3 == 1 || swipes % 3 == -2) {
-      thirdItemJumps -= 1;
-      items.third = items.first?.prev || null;
-      itemInSpotlight = items.first;
-    }
-    if (swipes % 3 == 2 || swipes % 3 == - 1) {
-      secondItemJumps -= 1;
-      items.second = items.third?.prev || null;
-      itemInSpotlight = items.third;
-    }
-    if (swipes % 3 == 0) {
-      firstItemJumps -= 1;
-      items.first = items.second?.prev || null;
-      itemInSpotlight = items.second;
-    }
-    replace(`${$location}?${index - 1}`);
-  }
 
   $: currentPage = Math.floor(index / perPage);
   $: currentPageIndex = index % perPage;
@@ -381,27 +335,66 @@
   }
 
   let panning: "vertical" | "horizontal" | null;
+  let opacity = 1;
   let backdropOpacity = 1;
   let moveX = 0;
-  let currY = 0;
-  let xOffset = 0;
+  let moveY = 0;
   let firstItemJumps = 0;
   let thirdItemJumps = 0;
   let secondItemJumps = 0;
   let swipes = 0;
-  let scaling = 1;
   const spacing = 20;
-  const damping = 0.8;
   $: panThresholdForChange = viewportWidth / 4;
+  $: panThresholdForClose = viewportHeight / 5;
+
+  function next() {
+    swipes -= 1;
+    moveX = swipes * (viewportWidth + spacing);
+    if (swipes % 3 == 1 || swipes % 3 == -2) {
+      secondItemJumps += 1;
+      items.second = items.first?.next || null;
+      itemInSpotlight = items.first;
+    }
+    if (swipes % 3 == 2 || swipes % 3 == -1) {
+      firstItemJumps += 1;
+      items.first = items.third?.next || null;
+      itemInSpotlight = items.third;
+    }
+    if (swipes % 3 == 0) {
+      thirdItemJumps += 1;
+      items.third = items.second?.next || null;
+      itemInSpotlight = items.second;
+    }
+    replace(`${$location}?${index + 1}`);
+  }
+
+  function prev() {
+    swipes += 1;
+    moveX = swipes * (viewportWidth + spacing);
+    if (swipes % 3 == 1 || swipes % 3 == -2) {
+      thirdItemJumps -= 1;
+      items.third = items.first?.prev || null;
+      itemInSpotlight = items.first;
+    }
+    if (swipes % 3 == 2 || swipes % 3 == - 1) {
+      secondItemJumps -= 1;
+      items.second = items.third?.prev || null;
+      itemInSpotlight = items.third;
+    }
+    if (swipes % 3 == 0) {
+      firstItemJumps -= 1;
+      items.first = items.second?.prev || null;
+      itemInSpotlight = items.second;
+    }
+    replace(`${$location}?${index - 1}`);
+  }
 
   function stopMoving(e: CustomEvent) {
+    opacity = 1;
     backdropOpacity = 1;
-    scaling = 1;
-
-    currY = 0;
+    moveY = 0;
 
     if (panning == "horizontal") {
-      panning = null;
       if (hasPrev && e.detail.deltaX > panThresholdForChange) {
         prev();
       } else if (hasNext && e.detail.deltaX < -panThresholdForChange) {
@@ -411,8 +404,14 @@
         moveX = swipes * (viewportWidth + spacing);
       }
     } else {
-      panning = null;
+      if (Math.abs(e.detail.deltaY) > panThresholdForClose) {
+        opacity = 0;
+        backdropOpacity = 0;
+        moveY = viewportHeight * Math.sign(e.detail.deltaY);
+        setTimeout(pop, 300);
+      }
     }
+    panning = null;
   }
 
   function move(e: CustomEvent) {
@@ -421,18 +420,16 @@
     }
 
     if (panning == "vertical") {
-      currY = e.detail.deltaY * damping;
-      backdropOpacity = 1 - (Math.abs(e.detail.deltaY) * damping) / viewportHeight;
-      scaling = 1 - (Math.abs(e.detail.distance) * damping) / Math.sqrt((viewportHeight ** 2) + (viewportWidth ** 2));
-      // xOffset = e.detail.deltaX * damping;
+      moveY = e.detail.deltaY;
+      backdropOpacity = 1 - (Math.abs(e.detail.deltaY) * 1.5) / viewportHeight;
     } else {
-      moveX = swipes * (viewportWidth + spacing) + e.detail.deltaX * damping;
+      moveX = swipes * (viewportWidth + spacing) + e.detail.deltaX * 0.8;
     }
   }
 
-  $: firstX = (-viewportWidth - spacing) + firstItemJumps * (3 * (viewportWidth + spacing)) + xOffset;
-  $: thirdX = (viewportWidth + spacing) + thirdItemJumps * (3 * (viewportWidth + spacing)) + xOffset;
-  $: secondX = (secondItemJumps * (3 * (viewportWidth + spacing))) + xOffset;
+  $: firstX = (-viewportWidth - spacing) + firstItemJumps * (3 * (viewportWidth + spacing));
+  $: thirdX = (viewportWidth + spacing) + thirdItemJumps * (3 * (viewportWidth + spacing));
+  $: secondX = (secondItemJumps * (3 * (viewportWidth + spacing)));
 
 </script>
 
@@ -443,15 +440,15 @@
 
   <div class="swiper" use:touch on:panmove={move} on:panend={stopMoving}>
     <div class="assets {panning ? 'no-transition' : ''}"
-         style="transform: translate3d({moveX}px, 0px, 0px)">
+         style="transform: translate3d({moveX}px, {moveY}px, 0px); opacity: {opacity}">
 
       {#if items.first}
-        <div class="asset no-transition"
+        <div class="asset"
              style="width: {firstWidth}px;
                     height: {firstHeight}px;
                     left: {firstLeft}px;
                     top: {firstTop}px;
-                    transform: translate3d({firstX}px, {currY}px, 0px) scale({scaling})">
+                    transform: translate3d({firstX}px, 0px, 0px)">
 
           <ImageLoader uuid={items.first.uuid}
                       variant="resized"
@@ -460,12 +457,12 @@
       {/if}
 
       {#if items.second}
-        <div class="asset no-transition"
+        <div class="asset"
             style="width: {secondWidth}px;
                     height: {secondHeight}px;
                     left: {secondLeft}px;
                     top: {secondTop}px;
-                    transform: translate3d({secondX}px, {currY}px, 0px) scale({scaling})">
+                    transform: translate3d({secondX}px, 0px, 0px)">
 
           <ImageLoader uuid={items.second.uuid}
                       variant="resized"
@@ -475,12 +472,12 @@
       {/if}
 
       {#if items.third}
-        <div class="asset no-transition"
+        <div class="asset"
             style="width: {thirdWidth}px;
                     height: {thirdHeight}px;
                     left: {thirdLeft}px;
                     top: {thirdTop}px;
-                    transform: translate3d({thirdX}px, {currY}px, 0px) scale({scaling})">
+                    transform: translate3d({thirdX}px, 0px, 0px)">
 
           <ImageLoader uuid={items.third.uuid}
                       variant="resized"
