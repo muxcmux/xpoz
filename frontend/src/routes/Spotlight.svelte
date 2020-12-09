@@ -387,15 +387,17 @@
       if (itemInSpotlight == c) {
         if (zooming) {
           assetAnimatedTransition = true;
-          panningOriginalX = carousel[key].x;
-          panningOriginalY = carousel[key].y;
+          panOrigin = {
+            x: carousel[key].x,
+            y: carousel[key].y,
+          }
           carousel[key].scale = carousel[key].zoomedScale;
+          console.log('original position', panOrigin);
         } else {
           carousel[key].scale = 1;
-          carousel[key].x = panningOriginalX;
-          carousel[key].y = panningOriginalY;
-          panningDeltaX = 0;
-          panningDeltaY = 0;
+          carousel[key].x = panOrigin.x;
+          carousel[key].y = panOrigin.y;
+          panDelta = { x: 0, y: 0 };
           setTimeout(() => assetAnimatedTransition = false, 300);
         }
       }
@@ -406,9 +408,9 @@
     assetAnimatedTransition = false;
     for (const [key, c] of Object.entries(carousel)) {
       if (itemInSpotlight == c) {
-        const { min, max } = carousel[key].getZoomedBoundsForOrigin({ x: panningOriginalX, y: panningOriginalY});
-        const x = panningOriginalX + panningDeltaX + e.detail.deltaX;
-        const y = panningOriginalY + panningDeltaY + e.detail.deltaY;
+        const { min, max } = carousel[key].getZoomedBoundsForOrigin(panOrigin);
+        const x = panOrigin.x + panDelta.x + e.detail.deltaX;
+        const y = panOrigin.y + panDelta.y + e.detail.deltaY;
         carousel[key].x = clamp(x, min.x, max.x);
         carousel[key].y = clamp(y, min.y, max.y);
       }
@@ -421,23 +423,27 @@
     const inertiaY = e.detail.deltaY * Math.abs(e.detail.velocityY);
     for (const [key, c] of Object.entries(carousel)) {
       if (itemInSpotlight == c) {
-        const { min, max } = carousel[key].getZoomedBoundsForOrigin({ x: panningOriginalX, y: panningOriginalY});
+        const { min, max } = carousel[key].getZoomedBoundsForOrigin(panOrigin);
         const endX = carousel[key].x// + inertiaX;
         const endY = carousel[key].y// + inertiaY;
-        const deltaX = panningDeltaX + e.detail.deltaX// + inertiaX;
-        const deltaY = panningDeltaY + e.detail.deltaY// + inertiaY;
+        const deltaX = panDelta.x + e.detail.deltaX// + inertiaX;
+        const deltaY = panDelta.y + e.detail.deltaY// + inertiaY;
         carousel[key].x = clamp(endX, min.x, max.x);
         carousel[key].y = clamp(endY, min.y, max.y);
-        panningDeltaX = clamp(deltaX, min.x, max.x);
-        panningDeltaY = clamp(deltaY, min.y, max.y);
+        const diffX = (carousel[key].width * carousel[key].zoomedScale - carousel[key].width) / 2;
+        const diffY = (carousel[key].height * carousel[key].zoomedScale - carousel[key].height) / 2;
+        const minDeltaX = - diffX;
+        const maxDeltaX = diffX;
+        const minDeltaY = - diffY;
+        const maxDeltaY = diffY;
+        panDelta.x = clamp(deltaX, minDeltaX, maxDeltaX);
+        panDelta.y = clamp(deltaY, minDeltaY, maxDeltaY);
       }
     }
   }
 
-  let panningOriginalX = 0;
-  let panningOriginalY = 0;
-  let panningDeltaX = 0;
-  let panningDeltaY = 0;
+  let panOrigin = { x: 0, y: 0 };
+  let panDelta = { x: 0, y: 0 };
   let assetAnimatedTransition = false;
 
 </script>
