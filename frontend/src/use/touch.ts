@@ -5,15 +5,28 @@ export default function(node: HTMLElement) {
     recognizers: [
       [Hammer.Pinch],
       [Hammer.Pan, { direction: Hammer.DIRECTION_ALL, threshold: 5 }],
-      [Hammer.Swipe,{ direction: Hammer.DIRECTION_ALL }],
+      [Hammer.Tap, { event: "doubletap", taps: 2 }],
+      [Hammer.Tap, { event: "singletap" }],
     ]
+  });
+
+  hammer.on('singletap', e => {
+    node.dispatchEvent(new CustomEvent("singletap", {
+      detail: e
+    }));
+  });
+
+  hammer.on('doubletap', e => {
+    node.dispatchEvent(new CustomEvent("doubletap", {
+      detail: e
+    }));
   });
 
   hammer.on('panstart', e => {
     node.dispatchEvent(new CustomEvent("panstart", {
       detail: e
-    }))
-  })
+    }));
+  });
 
   hammer.on('panmove', e => {
     node.dispatchEvent(new CustomEvent("panmove", {

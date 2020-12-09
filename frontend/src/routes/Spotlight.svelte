@@ -32,6 +32,10 @@
   .asset {
     position: fixed;
 
+    &.assetAnimatedTransition {
+      transition: .3s transform cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
     :global(.image-loader) {
       &.loading {
         @keyframes loader {
@@ -161,6 +165,8 @@
   import ImageLoader from "../components/ImageLoader.svelte";
   import touch from "../use/touch";
   import { Gallery, GalleryItem } from "../lib/gallery";
+  import { CarouselItem } from "../lib/carousel";
+  import { clamp } from "../utils/math";
 
   export let album: Album;
   export let index: number;
@@ -176,16 +182,16 @@
   let loadedPages = [loadPage];
   let lastPage = Math.floor((album.photosCount + album.videosCount) / perPage);
   let gallery = new Gallery<Asset>();
-  let itemInSpotlight: GalleryItem<Asset> | null = null;
+  let itemInSpotlight: CarouselItem | null = null;
   const seeded = {
     first: false,
     second: false,
     third: false,
   }
-  const items: {[key: string]: GalleryItem<Asset> | null} = {
-    first: null,
-    second: null,
-    third: null,
+  const carousel: {[key: string]: CarouselItem} = {
+    first: new CarouselItem(-1),
+    second: new CarouselItem(0),
+    third: new CarouselItem(1),
   }
 
   const req = operationStore(getAlbum, {
@@ -212,30 +218,30 @@
       let cursor = loadedPages.indexOf(cp) * perPage + cpi;
 
       if (!seeded.second) {
-        items.second = gallery.items[cursor];
-        itemInSpotlight = items.second;
+        carousel.second = carousel.second.setItem(gallery.items[cursor]);
+        itemInSpotlight = carousel.second;
         seeded.second = true;
 
-        if (items.second.prev) {
-          items.first = items.second.prev;
+        if (carousel.second!.item!.prev) {
+          carousel.first = carousel.first.setItem(carousel.second!.item!.prev);
           seeded.first = true;
         }
 
-        if (items.second.next) {
-          items.third = items.second.next;
+        if (carousel.second!.item!.next) {
+          carousel.third = carousel.third.setItem(carousel.second!.item!.next);
           seeded.third = true;
         }
       }
 
       // seeding the first item didn't work with the first page
       if (!seeded.first && cursor > 0 && gallery.size() > perPage) {
-        items.first = gallery.items[cursor - 1];
+        carousel.first = carousel.first.setItem(gallery.items[cursor - 1]);
         seeded.first = true;
       }
 
       // seeding the third item did't with the first page
       if (!seeded.third && index < album.photosCount + album.videosCount - 1 && gallery.size() > perPage) {
-        items.third = gallery.items[cursor + 1];
+        carousel.third = carousel.third.setItem(gallery.items[cursor + 1]);
         seeded.third = true;
       }
     }
@@ -269,69 +275,14 @@
 
   let viewportHeight: number;
   let viewportWidth: number;
-  let firstWidth   = 0;
-  let firstHeight  = 0;
-  let firstLeft    = 0;
-  let firstTop     = 0;
-  let secondWidth  = 0;
-  let secondHeight = 0;
-  let secondLeft   = 0;
-  let secondTop    = 0;
-  let thirdWidth   = 0;
-  let thirdHeight  = 0;
-  let thirdLeft    = 0;
-  let thirdTop     = 0;
 
-  $: firstAssetWidth   = items.first?.asset.width || 0;
-  $: firstAssetHeight  = items.first?.asset.height || 0;
-  $: firstAssetRatio   = firstAssetWidth / firstAssetHeight;
-  $: secondAssetWidth  = items.second?.asset.width || 0;
-  $: secondAssetHeight = items.second?.asset.height || 0;
-  $: secondAssetRatio  = secondAssetWidth / secondAssetHeight;
-  $: thirdAssetWidth   = items.third?.asset.width || 0;
-  $: thirdAssetHeight  = items.third?.asset.height || 0;
-  $: thirdAssetRatio   = thirdAssetWidth / thirdAssetHeight;
-
-  $: firstAssetDesiredHeight = viewportHeight;
-  $: firstAssetDesiredWidth  = firstAssetDesiredHeight * firstAssetRatio;
-  $: if (firstAssetDesiredWidth > viewportWidth) {
-    firstWidth = viewportWidth;
-    firstHeight = viewportWidth / firstAssetRatio;
-    firstTop = viewportHeight / 2 - firstHeight / 2;
-    firstLeft = 0;
-  } else {
-    firstHeight = firstAssetDesiredHeight;
-    firstWidth = firstAssetDesiredWidth;
-    firstTop = 0;
-    firstLeft = viewportWidth / 2 - firstWidth / 2;
-  }
-
-  $: secondAssetDesiredHeight = viewportHeight;
-  $: secondAssetDesiredWidth  = secondAssetDesiredHeight * secondAssetRatio;
-  $: if (secondAssetDesiredWidth > viewportWidth) {
-    secondWidth = viewportWidth;
-    secondHeight = viewportWidth / secondAssetRatio;
-    secondTop = viewportHeight / 2 - secondHeight / 2;
-    secondLeft = 0;
-  } else {
-    secondHeight = secondAssetDesiredHeight;
-    secondWidth = secondAssetDesiredWidth;
-    secondTop = 0;
-    secondLeft = viewportWidth / 2 - secondWidth / 2;
-  }
-
-  $: thirdAssetDesiredHeight = viewportHeight;
-  $: thirdAssetDesiredWidth  = thirdAssetDesiredHeight * thirdAssetRatio;
-  $: if (thirdAssetDesiredWidth > viewportWidth) {
-    thirdWidth = viewportWidth;
-    thirdHeight = viewportWidth / thirdAssetRatio;
-    thirdTop = viewportHeight / 2 - thirdHeight / 2;
-    thirdLeft = 0;
-  } else {
-    thirdHeight = thirdAssetDesiredHeight;
-    thirdWidth = thirdAssetDesiredWidth;
-    thirdTop = 0;
-    thirdLeft = viewportWidth / 2 - thirdWidth / 2;
+  function onResize() {
+    setTimeout(() => {
+      moveX = swipes * (viewportWidth + spacing);
+    }, 10)
+    for (const [key, c] of Object.entries(carousel)) {
+      carousel[key] = carousel[key].setItem(c.item);
+    }
   }
 
   let panning: "vertical" | "horizontal" | null;
@@ -339,10 +290,8 @@
   let backdropOpacity = 1;
   let moveX = 0;
   let moveY = 0;
-  let firstItemJumps = 0;
-  let thirdItemJumps = 0;
-  let secondItemJumps = 0;
   let swipes = 0;
+  let zooming = false;
   const spacing = 20;
   $: panThresholdForChange = viewportWidth / 4;
   $: panThresholdForClose = viewportHeight / 5;
@@ -351,19 +300,19 @@
     swipes -= 1;
     moveX = swipes * (viewportWidth + spacing);
     if (swipes % 3 == 1 || swipes % 3 == -2) {
-      secondItemJumps += 1;
-      items.second = items.first?.next || null;
-      itemInSpotlight = items.first;
+      carousel.second.jumps += 1;
+      carousel.second.setItem(carousel.first!.item?.next || null);
+      itemInSpotlight = carousel.first;
     }
     if (swipes % 3 == 2 || swipes % 3 == -1) {
-      firstItemJumps += 1;
-      items.first = items.third?.next || null;
-      itemInSpotlight = items.third;
+      carousel.first.jumps += 1;
+      carousel.first.setItem(carousel.third!.item?.next || null);
+      itemInSpotlight = carousel.third;
     }
     if (swipes % 3 == 0) {
-      thirdItemJumps += 1;
-      items.third = items.second?.next || null;
-      itemInSpotlight = items.second;
+      carousel.third.jumps += 1;
+      carousel.third.setItem(carousel.second!.item?.next || null);
+      itemInSpotlight = carousel.second;
     }
     replace(`${$location}?${index + 1}`);
   }
@@ -372,24 +321,26 @@
     swipes += 1;
     moveX = swipes * (viewportWidth + spacing);
     if (swipes % 3 == 1 || swipes % 3 == -2) {
-      thirdItemJumps -= 1;
-      items.third = items.first?.prev || null;
-      itemInSpotlight = items.first;
+      carousel.third.jumps -= 1;
+      carousel.third.setItem(carousel.first!.item?.prev || null);
+      itemInSpotlight = carousel.first;
     }
     if (swipes % 3 == 2 || swipes % 3 == - 1) {
-      secondItemJumps -= 1;
-      items.second = items.third?.prev || null;
-      itemInSpotlight = items.third;
+      carousel.second.jumps -= 1;
+      carousel.second.setItem(carousel.third!.item?.prev || null);
+      itemInSpotlight = carousel.third;
     }
     if (swipes % 3 == 0) {
-      firstItemJumps -= 1;
-      items.first = items.second?.prev || null;
-      itemInSpotlight = items.second;
+      carousel.first.jumps -= 1;
+      carousel.first.setItem(carousel.second!.item?.prev || null);
+      itemInSpotlight = carousel.second;
     }
     replace(`${$location}?${index - 1}`);
   }
 
   function stopMoving(e: CustomEvent) {
+    if (zooming) return stopZoomedMoving(e);
+
     opacity = 1;
     backdropOpacity = 1;
     moveY = 0;
@@ -415,6 +366,8 @@
   }
 
   function move(e: CustomEvent) {
+    if (zooming) return zoomedMove(e);
+
     if (!panning) {
       panning = ["pandown", "panup"].includes(e.detail.additionalEvent) ? panning = "vertical" : "horizontal";
     }
@@ -423,67 +376,95 @@
       moveY = e.detail.deltaY;
       backdropOpacity = 1 - (Math.abs(e.detail.deltaY) * 1.5) / viewportHeight;
     } else {
-      moveX = swipes * (viewportWidth + spacing) + e.detail.deltaX * 0.8;
+      moveX = swipes * (viewportWidth + spacing) + e.detail.deltaX * 0.85;
     }
   }
 
-  $: firstX = (-viewportWidth - spacing) + firstItemJumps * (3 * (viewportWidth + spacing));
-  $: thirdX = (viewportWidth + spacing) + thirdItemJumps * (3 * (viewportWidth + spacing));
-  $: secondX = (secondItemJumps * (3 * (viewportWidth + spacing)));
+  function zoom(e: CustomEvent) {
+    zooming = !zooming;
+    console.log(e.detail)
+    for (const [key, c] of Object.entries(carousel)) {
+      if (itemInSpotlight == c) {
+        if (zooming) {
+          assetAnimatedTransition = true;
+          panningOriginalX = carousel[key].x;
+          panningOriginalY = carousel[key].y;
+          carousel[key].scale = carousel[key].zoomedScale;
+        } else {
+          carousel[key].scale = 1;
+          carousel[key].x = panningOriginalX;
+          carousel[key].y = panningOriginalY;
+          panningDeltaX = 0;
+          panningDeltaY = 0;
+          setTimeout(() => assetAnimatedTransition = false, 300);
+        }
+      }
+    }
+  }
+
+  function zoomedMove(e: CustomEvent) {
+    assetAnimatedTransition = false;
+    for (const [key, c] of Object.entries(carousel)) {
+      if (itemInSpotlight == c) {
+        const { min, max } = carousel[key].getZoomedBoundsForOrigin({ x: panningOriginalX, y: panningOriginalY});
+        const x = panningOriginalX + panningDeltaX + e.detail.deltaX;
+        const y = panningOriginalY + panningDeltaY + e.detail.deltaY;
+        carousel[key].x = clamp(x, min.x, max.x);
+        carousel[key].y = clamp(y, min.y, max.y);
+      }
+    }
+  }
+
+  function stopZoomedMoving(e: CustomEvent) {
+    assetAnimatedTransition = true;
+    const inertiaX = e.detail.deltaX * Math.abs(e.detail.velocityX);
+    const inertiaY = e.detail.deltaY * Math.abs(e.detail.velocityY);
+    for (const [key, c] of Object.entries(carousel)) {
+      if (itemInSpotlight == c) {
+        const { min, max } = carousel[key].getZoomedBoundsForOrigin({ x: panningOriginalX, y: panningOriginalY});
+        const endX = carousel[key].x// + inertiaX;
+        const endY = carousel[key].y// + inertiaY;
+        const deltaX = panningDeltaX + e.detail.deltaX// + inertiaX;
+        const deltaY = panningDeltaY + e.detail.deltaY// + inertiaY;
+        carousel[key].x = clamp(endX, min.x, max.x);
+        carousel[key].y = clamp(endY, min.y, max.y);
+        panningDeltaX = clamp(deltaX, min.x, max.x);
+        panningDeltaY = clamp(deltaY, min.y, max.y);
+      }
+    }
+  }
+
+  let panningOriginalX = 0;
+  let panningOriginalY = 0;
+  let panningDeltaX = 0;
+  let panningDeltaY = 0;
+  let assetAnimatedTransition = false;
 
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
+<svelte:window on:resize={onResize} bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
 
 <div class="spotlight" in:fade={{ duration: 150 }}>
-  <div class="backdrop {panning == "vertical" ? 'no-transition' : ''}" style="opacity: {backdropOpacity}" on:click={() => replace($location)}></div>
+  <div class="backdrop {panning == "vertical" ? 'no-transition' : ''}"
+       style="opacity: {backdropOpacity}"
+       on:click={() => replace($location)}></div>
 
-  <div class="swiper" use:touch on:panmove={move} on:panend={stopMoving}>
+  <div class="swiper" use:touch on:panmove={move} on:panend={stopMoving} on:doubletap={zoom}>
     <div class="assets {panning ? 'no-transition' : ''}"
          style="transform: translate3d({moveX}px, {moveY}px, 0px); opacity: {opacity}">
+      {#each Object.entries(carousel) as [_, c]}
+        {#if c.item}
+          <div class="asset" class:assetAnimatedTransition
+              style="width: {c.width}px;
+                      height: {c.height}px;
+                      left: {c.left}px;
+                      top: {c.top}px;
+                      transform: translate3d({c.x}px, {c.y}px, 0px) scale({c.scale})">
 
-      {#if items.first}
-        <div class="asset"
-             style="width: {firstWidth}px;
-                    height: {firstHeight}px;
-                    left: {firstLeft}px;
-                    top: {firstTop}px;
-                    transform: translate3d({firstX}px, 0px, 0px)">
-
-          <ImageLoader uuid={items.first.uuid}
-                      variant="resized"
-                      alt={items.first.uuid} />
-        </div>
-      {/if}
-
-      {#if items.second}
-        <div class="asset"
-            style="width: {secondWidth}px;
-                    height: {secondHeight}px;
-                    left: {secondLeft}px;
-                    top: {secondTop}px;
-                    transform: translate3d({secondX}px, 0px, 0px)">
-
-          <ImageLoader uuid={items.second.uuid}
-                      variant="resized"
-                      alt={items.second.uuid}
-                      on:click={() => replace($location)} />
-        </div>
-      {/if}
-
-      {#if items.third}
-        <div class="asset"
-            style="width: {thirdWidth}px;
-                    height: {thirdHeight}px;
-                    left: {thirdLeft}px;
-                    top: {thirdTop}px;
-                    transform: translate3d({thirdX}px, 0px, 0px)">
-
-          <ImageLoader uuid={items.third.uuid}
-                      variant="resized"
-                      alt={items.third.uuid} />
-        </div>
-      {/if}
+            <ImageLoader uuid={c.item.uuid} variant="resized" alt={c.item.uuid} />
+          </div>
+        {/if}
+      {/each}
     </div>
   </div>
 
@@ -494,13 +475,13 @@
       </p>
     {/if}
 
-    <ul>
+    <!-- <ul>
       {#each gallery.items as item}
-        <li class="{itemInSpotlight?.uuid == item.uuid ? 'selected' : ''}" in:scale>
+        <li class="{itemInSpotlight?.item?.uuid == item.uuid ? 'selected' : ''}" in:scale>
           <ImageLoader uuid={item.uuid} variant="thumb" alt={item.uuid} />
         </li>
       {/each}
-    </ul>
+    </ul> -->
   </div>
 
   {#if hasPrev}
@@ -515,5 +496,3 @@
     </button>
   {/if}
 </div>
-
-
