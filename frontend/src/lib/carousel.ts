@@ -1,15 +1,6 @@
 import type { Asset } from "../codegen/types";
 import type { GalleryItem } from "./gallery";
-
-type Bounds = {
-  min: Point,
-  max: Point,
-}
-
-type Point = {
-  x: number,
-  y: number,
-}
+import type { Bounds, Point } from "../utils/math";
 
 export class CarouselItem {
   public item: GalleryItem<Asset> | null;

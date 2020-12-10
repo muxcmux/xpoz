@@ -166,7 +166,8 @@
   import touch from "../use/touch";
   import { Gallery, GalleryItem } from "../lib/gallery";
   import { CarouselItem } from "../lib/carousel";
-  import { clamp } from "../utils/math";
+  import { between, clamp, outOfBounds, roundBounds, roundPoint } from "../utils/math";
+  import type { Point, Bounds } from "../utils/math";
 
   export let album: Album;
   export let index: number;
@@ -365,6 +366,10 @@
     panning = null;
   }
 
+  function startMoving(e: CustomEvent) {
+    if (zooming) return startZoomedMoving(e);
+  }
+
   function move(e: CustomEvent) {
     if (zooming) return zoomedMove(e);
 
@@ -382,11 +387,10 @@
 
   function zoom(e: CustomEvent) {
     zooming = !zooming;
-    console.log(e.detail)
+    assetAnimatedTransition = true;
     for (const [key, c] of Object.entries(carousel)) {
       if (itemInSpotlight == c) {
         if (zooming) {
-          assetAnimatedTransition = true;
           panOrigin = {
             x: carousel[key].x,
             y: carousel[key].y,
@@ -404,46 +408,112 @@
     }
   }
 
-  function zoomedMove(e: CustomEvent) {
+  function startZoomedMoving(e: CustomEvent) {
     assetAnimatedTransition = false;
+    cancelAnimationFrame(rAF);
+    currentMoveWithinBoundsDelta = { x: 0, y: 0 };
+    currentMoveOutOfBoundsDelta = { x: 0, y: 0 };
+
     for (const [key, c] of Object.entries(carousel)) {
       if (itemInSpotlight == c) {
-        const { min, max } = carousel[key].getZoomedBoundsForOrigin(panOrigin);
-        const x = panOrigin.x + panDelta.x + e.detail.deltaX;
-        const y = panOrigin.y + panDelta.y + e.detail.deltaY;
-        carousel[key].x = clamp(x, min.x, max.x);
-        carousel[key].y = clamp(y, min.y, max.y);
+        const diffX = (carousel[key].width * carousel[key].scale - carousel[key].width) / 2;
+        const diffY = (carousel[key].height * carousel[key].scale - carousel[key].height) / 2;
+
+        panBounds = {
+          min: { x: -diffX, y: -diffY },
+          max: { x: diffX, y: diffY }
+        }
+      }
+    }
+  }
+
+  function zoomedMove(e: CustomEvent) {
+    for (const [key, c] of Object.entries(carousel)) {
+      if (itemInSpotlight == c) {
+        const bounds = carousel[key].getZoomedBoundsForOrigin(roundPoint(panOrigin));
+
+        const oob = outOfBounds(roundPoint({
+          x: panOrigin.x + panDelta.x + e.detail.deltaX,
+          y: panOrigin.y + panDelta.y + e.detail.deltaY
+        }), bounds);
+
+        if (oob) {
+          currentMoveOutOfBoundsDelta = {
+            x: (e.detail.deltaX - currentMoveWithinBoundsDelta.x) * 0.5,
+            y: (e.detail.deltaY - currentMoveWithinBoundsDelta.y) * 0.5,
+          }
+        } else {
+          currentMoveWithinBoundsDelta = {
+            x: e.detail.deltaX,
+            y: e.detail.deltaY,
+          }
+        }
+
+        const x = panOrigin.x + panDelta.x + currentMoveDelta.x;
+        const y = panOrigin.y + panDelta.y + currentMoveDelta.y;
+
+        carousel[key].x = x;
+        carousel[key].y = y;
       }
     }
   }
 
   function stopZoomedMoving(e: CustomEvent) {
-    assetAnimatedTransition = true;
-    const inertiaX = e.detail.deltaX * Math.abs(e.detail.velocityX);
-    const inertiaY = e.detail.deltaY * Math.abs(e.detail.velocityY);
+    const decelerationAmmount = {
+      x: (currentMoveDelta.x * 0.5) * Math.min(Math.abs(e.detail.velocityX * 0.5), 2),
+      y: (currentMoveDelta.y * 0.5) * Math.min(Math.abs(e.detail.velocityY * 0.5), 2),
+    }
+
+    console.log(e.detail);
+
     for (const [key, c] of Object.entries(carousel)) {
       if (itemInSpotlight == c) {
-        const { min, max } = carousel[key].getZoomedBoundsForOrigin(panOrigin);
-        const endX = carousel[key].x// + inertiaX;
-        const endY = carousel[key].y// + inertiaY;
-        const deltaX = panDelta.x + e.detail.deltaX// + inertiaX;
-        const deltaY = panDelta.y + e.detail.deltaY// + inertiaY;
-        carousel[key].x = clamp(endX, min.x, max.x);
-        carousel[key].y = clamp(endY, min.y, max.y);
-        const diffX = (carousel[key].width * carousel[key].zoomedScale - carousel[key].width) / 2;
-        const diffY = (carousel[key].height * carousel[key].zoomedScale - carousel[key].height) / 2;
-        const minDeltaX = - diffX;
-        const maxDeltaX = diffX;
-        const minDeltaY = - diffY;
-        const maxDeltaY = diffY;
-        panDelta.x = clamp(deltaX, minDeltaX, maxDeltaX);
-        panDelta.y = clamp(deltaY, minDeltaY, maxDeltaY);
+        const deltaX = panDelta.x + currentMoveDelta.x;
+        const deltaY = panDelta.y + currentMoveDelta.y;
+
+        panDelta.x = deltaX;
+        panDelta.y = deltaY;
+
+        decelerate(key, 0.9, decelerationAmmount);
       }
     }
   }
 
-  let panOrigin = { x: 0, y: 0 };
-  let panDelta = { x: 0, y: 0 };
+  function decelerate(key: string, friction: number, { x, y }: Point) {
+    if (outOfBounds(roundPoint(panDelta), roundBounds(panBounds))) friction = 0.5;
+
+    const delta = { x: x * friction, y: y * friction };
+
+    panDelta.x += delta.x;
+    panDelta.y += delta.y;
+
+    carousel[key].x = panOrigin.x + panDelta.x;
+    carousel[key].y = panOrigin.y + panDelta.y;
+
+    if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) {
+      /* debugger; */
+      let oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
+      if (oob) {
+      }
+      return
+    }
+
+    rAF = requestAnimationFrame(() => {
+      decelerate(key, friction, delta);
+    })
+  }
+
+  let rAF: number;
+
+  let currentMoveWithinBoundsDelta: Point = { x: 0, y: 0 };
+  let currentMoveOutOfBoundsDelta: Point = { x: 0, y: 0 };
+  $: currentMoveDelta = {
+    x: currentMoveWithinBoundsDelta.x + currentMoveOutOfBoundsDelta.x,
+    y: currentMoveWithinBoundsDelta.y + currentMoveOutOfBoundsDelta.y,
+  }
+  let panOrigin: Point = { x: 0, y: 0 };
+  let panDelta: Point = { x: 0, y: 0 };
+  let panBounds: Bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
   let assetAnimatedTransition = false;
 
 </script>
@@ -455,7 +525,7 @@
        style="opacity: {backdropOpacity}"
        on:click={() => replace($location)}></div>
 
-  <div class="swiper" use:touch on:panmove={move} on:panend={stopMoving} on:doubletap={zoom}>
+  <div class="swiper" use:touch on:panmove={move} on:panstart={startMoving} on:panend={stopMoving} on:doubletap={zoom}>
     <div class="assets {panning ? 'no-transition' : ''}"
          style="transform: translate3d({moveX}px, {moveY}px, 0px); opacity: {opacity}">
       {#each Object.entries(carousel) as [_, c]}

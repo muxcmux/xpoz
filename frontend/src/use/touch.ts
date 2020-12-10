@@ -4,7 +4,7 @@ export default function(node: HTMLElement) {
   let hammer = new Hammer.Manager(node, {
     recognizers: [
       [Hammer.Pinch],
-      [Hammer.Pan, { direction: Hammer.DIRECTION_ALL, threshold: 5 }],
+      [Hammer.Pan, { direction: Hammer.DIRECTION_ALL, threshold: 2 }],
       [Hammer.Tap, { event: "doubletap", taps: 2 }],
       [Hammer.Tap, { event: "singletap" }],
     ]
