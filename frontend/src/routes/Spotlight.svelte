@@ -449,6 +449,8 @@
           }
         }
 
+        console.log(e.detail);
+
         const x = panOrigin.x + panDelta.x + currentMoveDelta.x;
         const y = panOrigin.y + panDelta.y + currentMoveDelta.y;
 
@@ -459,30 +461,44 @@
   }
 
   function stopZoomedMoving(e: CustomEvent) {
+    console.log(e.detail);
+
     const decelerationAmmount = {
-      x: (currentMoveDelta.x * 0.5) * Math.min(Math.abs(e.detail.velocityX * 0.5), 2),
-      y: (currentMoveDelta.y * 0.5) * Math.min(Math.abs(e.detail.velocityY * 0.5), 2),
+      x: Math.min(Math.abs(e.detail.velocityX), 2) * 12 * Math.sign(e.detail.velocityX),
+      y: Math.min(Math.abs(e.detail.velocityY), 2) * 12 * Math.sign(e.detail.velocityY),
     }
 
     console.log(e.detail);
 
     for (const [key, c] of Object.entries(carousel)) {
       if (itemInSpotlight == c) {
-        const deltaX = panDelta.x + currentMoveDelta.x;
-        const deltaY = panDelta.y + currentMoveDelta.y;
+        const deltaX = panDelta.x + currentMoveDelta.x - (e.detail.velocityX * 40); // workaround svelte not updating views in time
+        const deltaY = panDelta.y + currentMoveDelta.y - (e.detail.velocityY * 40);
 
         panDelta.x = deltaX;
         panDelta.y = deltaY;
 
-        decelerate(key, 0.9, decelerationAmmount);
+        decelerate(key, 0.3, decelerationAmmount);
       }
     }
   }
 
   function decelerate(key: string, friction: number, { x, y }: Point) {
-    if (outOfBounds(roundPoint(panDelta), roundBounds(panBounds))) friction = 0.5;
+    /* if (outOfBounds(roundPoint(panDelta), roundBounds(panBounds))) friction = 0.5; */
 
-    const delta = { x: x * friction, y: y * friction };
+
+    let speed = Math.sqrt(x * x + y * y);
+    const angle = Math.atan2(y, x);
+    if (speed > friction) {
+      speed -= friction;
+    } else {
+      speed = 0;
+    }
+
+    const delta = {
+      x: Math.cos(angle) * speed,
+      y: Math.sin(angle) * speed,
+    }
 
     panDelta.x += delta.x;
     panDelta.y += delta.y;
@@ -491,7 +507,6 @@
     carousel[key].y = panOrigin.y + panDelta.y;
 
     if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) {
-      /* debugger; */
       let oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
       if (oob) {
       }
