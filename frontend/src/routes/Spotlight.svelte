@@ -183,7 +183,7 @@
   let loadedPages = [loadPage];
   let lastPage = Math.floor((album.photosCount + album.videosCount) / perPage);
   let gallery = new Gallery<Asset>();
-  let itemInSpotlight: CarouselItem | null = null;
+  let current: string = "second";
   const seeded = {
     first: false,
     second: false,
@@ -220,7 +220,6 @@
 
       if (!seeded.second) {
         carousel.second = carousel.second.setItem(gallery.items[cursor]);
-        itemInSpotlight = carousel.second;
         seeded.second = true;
 
         if (carousel.second!.item!.prev) {
@@ -303,17 +302,17 @@
     if (swipes % 3 == 1 || swipes % 3 == -2) {
       carousel.second.jumps += 1;
       carousel.second.setItem(carousel.first!.item?.next || null);
-      itemInSpotlight = carousel.first;
+      current = "first";
     }
     if (swipes % 3 == 2 || swipes % 3 == -1) {
       carousel.first.jumps += 1;
       carousel.first.setItem(carousel.third!.item?.next || null);
-      itemInSpotlight = carousel.third;
+      current = "third";
     }
     if (swipes % 3 == 0) {
       carousel.third.jumps += 1;
       carousel.third.setItem(carousel.second!.item?.next || null);
-      itemInSpotlight = carousel.second;
+      current = "second";
     }
     replace(`${$location}?${index + 1}`);
   }
@@ -324,17 +323,17 @@
     if (swipes % 3 == 1 || swipes % 3 == -2) {
       carousel.third.jumps -= 1;
       carousel.third.setItem(carousel.first!.item?.prev || null);
-      itemInSpotlight = carousel.first;
+      current = "first";
     }
     if (swipes % 3 == 2 || swipes % 3 == - 1) {
       carousel.second.jumps -= 1;
       carousel.second.setItem(carousel.third!.item?.prev || null);
-      itemInSpotlight = carousel.third;
+      current = "third";
     }
     if (swipes % 3 == 0) {
       carousel.first.jumps -= 1;
       carousel.first.setItem(carousel.second!.item?.prev || null);
-      itemInSpotlight = carousel.second;
+      current = "second";
     }
     replace(`${$location}?${index - 1}`);
   }
@@ -388,23 +387,19 @@
   function zoom(e: CustomEvent) {
     zooming = !zooming;
     assetAnimatedTransition = true;
-    for (const [key, c] of Object.entries(carousel)) {
-      if (itemInSpotlight == c) {
-        if (zooming) {
-          panOrigin = {
-            x: carousel[key].x,
-            y: carousel[key].y,
-          }
-          carousel[key].scale = carousel[key].zoomedScale;
-          console.log('original position', panOrigin);
-        } else {
-          carousel[key].scale = 1;
-          carousel[key].x = panOrigin.x;
-          carousel[key].y = panOrigin.y;
-          panDelta = { x: 0, y: 0 };
-          setTimeout(() => assetAnimatedTransition = false, 300);
-        }
+    if (zooming) {
+      panOrigin = {
+        x: carousel[current].x,
+        y: carousel[current].y,
       }
+      carousel[current].scale = carousel[current].zoomedScale;
+      console.log('original position', panOrigin);
+    } else {
+      carousel[current].scale = 1;
+      carousel[current].x = panOrigin.x;
+      carousel[current].y = panOrigin.y;
+      panDelta = { x: 0, y: 0 };
+      setTimeout(() => assetAnimatedTransition = false, 300);
     }
   }
 
@@ -414,50 +409,42 @@
     currentMoveWithinBoundsDelta = { x: 0, y: 0 };
     currentMoveOutOfBoundsDelta = { x: 0, y: 0 };
 
-    for (const [key, c] of Object.entries(carousel)) {
-      if (itemInSpotlight == c) {
-        const diffX = (carousel[key].width * carousel[key].scale - carousel[key].width) / 2;
-        const diffY = (carousel[key].height * carousel[key].scale - carousel[key].height) / 2;
+    const diffX = (carousel[current].width * carousel[current].scale - carousel[current].width) / 2;
+    const diffY = (carousel[current].height * carousel[current].scale - carousel[current].height) / 2;
 
-        panBounds = {
-          min: { x: -diffX, y: -diffY },
-          max: { x: diffX, y: diffY }
-        }
-      }
+    panBounds = {
+      min: { x: -diffX, y: -diffY },
+      max: { x: diffX, y: diffY }
     }
   }
 
   function zoomedMove(e: CustomEvent) {
-    for (const [key, c] of Object.entries(carousel)) {
-      if (itemInSpotlight == c) {
-        const bounds = carousel[key].getZoomedBoundsForOrigin(roundPoint(panOrigin));
+    const bounds = carousel[current].getZoomedBoundsForOrigin(roundPoint(panOrigin));
 
-        const oob = outOfBounds(roundPoint({
-          x: panOrigin.x + panDelta.x + e.detail.deltaX,
-          y: panOrigin.y + panDelta.y + e.detail.deltaY
-        }), bounds);
+    const oob = outOfBounds(roundPoint({
+      x: panOrigin.x + panDelta.x + e.detail.deltaX,
+      y: panOrigin.y + panDelta.y + e.detail.deltaY
+    }), bounds);
 
-        if (oob) {
-          currentMoveOutOfBoundsDelta = {
-            x: (e.detail.deltaX - currentMoveWithinBoundsDelta.x) * 0.5,
-            y: (e.detail.deltaY - currentMoveWithinBoundsDelta.y) * 0.5,
-          }
-        } else {
-          currentMoveWithinBoundsDelta = {
-            x: e.detail.deltaX,
-            y: e.detail.deltaY,
-          }
-        }
-
-        console.log(e.detail);
-
-        const x = panOrigin.x + panDelta.x + currentMoveDelta.x;
-        const y = panOrigin.y + panDelta.y + currentMoveDelta.y;
-
-        carousel[key].x = x;
-        carousel[key].y = y;
+    if (oob) {
+      currentMoveOutOfBoundsDelta = {
+        x: (e.detail.deltaX - currentMoveWithinBoundsDelta.x) * 0.5,
+        y: (e.detail.deltaY - currentMoveWithinBoundsDelta.y) * 0.5,
+      }
+    } else {
+      currentMoveWithinBoundsDelta = {
+        x: e.detail.deltaX,
+        y: e.detail.deltaY,
       }
     }
+
+    console.log(e.detail);
+
+    const x = panOrigin.x + panDelta.x + currentMoveDelta.x;
+    const y = panOrigin.y + panDelta.y + currentMoveDelta.y;
+
+    carousel[current].x = x;
+    carousel[current].y = y;
   }
 
   function stopZoomedMoving(e: CustomEvent) {
@@ -470,21 +457,17 @@
 
     console.log(e.detail);
 
-    for (const [key, c] of Object.entries(carousel)) {
-      if (itemInSpotlight == c) {
-        const deltaX = panDelta.x + currentMoveDelta.x - (e.detail.velocityX * 40); // workaround svelte not updating views in time
-        const deltaY = panDelta.y + currentMoveDelta.y - (e.detail.velocityY * 40);
+    const deltaX = panDelta.x + currentMoveDelta.x;
+    const deltaY = panDelta.y + currentMoveDelta.y;
 
-        panDelta.x = deltaX;
-        panDelta.y = deltaY;
+    panDelta.x = deltaX;
+    panDelta.y = deltaY;
 
-        decelerate(key, 0.3, decelerationAmmount);
-      }
-    }
+    decelerate(0.3, decelerationAmmount);
   }
 
-  function decelerate(key: string, friction: number, { x, y }: Point) {
-    /* if (outOfBounds(roundPoint(panDelta), roundBounds(panBounds))) friction = 0.5; */
+  function decelerate(friction: number, { x, y }: Point) {
+    /* if (outOfBounds(roundPoint(panDelta), roundBounds(panBounds))) friction = 0.8; */
 
 
     let speed = Math.sqrt(x * x + y * y);
@@ -495,6 +478,8 @@
       speed = 0;
     }
 
+    friction += 0.03;
+
     const delta = {
       x: Math.cos(angle) * speed,
       y: Math.sin(angle) * speed,
@@ -503,19 +488,26 @@
     panDelta.x += delta.x;
     panDelta.y += delta.y;
 
-    carousel[key].x = panOrigin.x + panDelta.x;
-    carousel[key].y = panOrigin.y + panDelta.y;
+    carousel[current].x = panOrigin.x + panDelta.x;
+    carousel[current].y = panOrigin.y + panDelta.y;
 
     if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) {
       let oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
       if (oob) {
+        // handle out of bounds movement back to within bounds
       }
       return
     }
+    debugger;
 
-    rAF = requestAnimationFrame(() => {
-      decelerate(key, friction, delta);
-    })
+    // Can't get Svelte to update carousel[current] on the first
+    // run of the decelerate function, which results in the first frame always
+    // being skipped a nasty jank. Adding a setTimeout seems to fix it.
+    setTimeout(() => {
+      rAF = requestAnimationFrame(() => {
+        decelerate(friction, delta);
+      });
+    }, 1);
   }
 
   let rAF: number;
