@@ -448,11 +448,9 @@
   }
 
   function stopZoomedMoving(e: CustomEvent) {
-    console.log(e.detail);
-
     const decelerationAmmount = {
-      x: Math.min(Math.abs(e.detail.velocityX), 2) * 12 * Math.sign(e.detail.velocityX),
-      y: Math.min(Math.abs(e.detail.velocityY), 2) * 12 * Math.sign(e.detail.velocityY),
+      x: Math.min(Math.abs(e.detail.velocityX), 1.3) * 12 * Math.sign(e.detail.velocityX),
+      y: Math.min(Math.abs(e.detail.velocityY), 1.3) * 12 * Math.sign(e.detail.velocityY),
     }
 
     console.log(e.detail);
@@ -463,7 +461,9 @@
     panDelta.x = deltaX;
     panDelta.y = deltaY;
 
-    decelerate(0.3, decelerationAmmount);
+    setTimeout(() => {
+      decelerate(0.3, decelerationAmmount);
+    }, 16);
   }
 
   function decelerate(friction: number, { x, y }: Point) {
@@ -478,7 +478,7 @@
       speed = 0;
     }
 
-    friction += 0.03;
+    friction += 0.02;
 
     const delta = {
       x: Math.cos(angle) * speed,
@@ -488,8 +488,10 @@
     panDelta.x += delta.x;
     panDelta.y += delta.y;
 
-    carousel[current].x = panOrigin.x + panDelta.x;
-    carousel[current].y = panOrigin.y + panDelta.y;
+    setTimeout(() => {
+      carousel[current].x = panOrigin.x + panDelta.x;
+      carousel[current].y = panOrigin.y + panDelta.y;
+    }, 1)
 
     if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) {
       let oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
@@ -498,16 +500,10 @@
       }
       return
     }
-    debugger;
 
-    // Can't get Svelte to update carousel[current] on the first
-    // run of the decelerate function, which results in the first frame always
-    // being skipped a nasty jank. Adding a setTimeout seems to fix it.
-    setTimeout(() => {
-      rAF = requestAnimationFrame(() => {
-        decelerate(friction, delta);
-      });
-    }, 1);
+    rAF = requestAnimationFrame(() => {
+      decelerate(friction, delta);
+    });
   }
 
   let rAF: number;
