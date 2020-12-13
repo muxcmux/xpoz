@@ -157,6 +157,7 @@
 
 <script lang="ts">
   import { fade, scale, fly } from "svelte/transition";
+  import { sineOut } from "svelte/easing";
   import { location, replace, pop } from "svelte-spa-router";
   import type { Asset, Album } from "src/codegen/types";
   import { getAlbum } from "../gql/albums";
@@ -387,18 +388,28 @@
   function zoom(e: CustomEvent) {
     zooming = !zooming;
     assetAnimatedTransition = true;
+    panDelta = { x: 0, y: 0 };
+
     if (zooming) {
       panOrigin = {
         x: carousel[current].x,
         y: carousel[current].y,
       }
+
       carousel[current].scale = carousel[current].zoomedScale;
+      const diffX = (carousel[current].width * carousel[current].scale - carousel[current].width) / 2;
+      const diffY = (carousel[current].height * carousel[current].scale - carousel[current].height) / 2;
+
+      panBounds = {
+        min: { x: -diffX, y: -diffY },
+        max: { x: diffX, y: diffY }
+      }
+
       console.log('original position', panOrigin);
     } else {
       carousel[current].scale = 1;
       carousel[current].x = panOrigin.x;
       carousel[current].y = panOrigin.y;
-      panDelta = { x: 0, y: 0 };
       setTimeout(() => assetAnimatedTransition = false, 300);
     }
   }
@@ -409,13 +420,6 @@
     currentMoveWithinBoundsDelta = { x: 0, y: 0 };
     currentMoveOutOfBoundsDelta = { x: 0, y: 0 };
 
-    const diffX = (carousel[current].width * carousel[current].scale - carousel[current].width) / 2;
-    const diffY = (carousel[current].height * carousel[current].scale - carousel[current].height) / 2;
-
-    panBounds = {
-      min: { x: -diffX, y: -diffY },
-      max: { x: diffX, y: diffY }
-    }
   }
 
   function zoomedMove(e: CustomEvent) {
@@ -426,19 +430,15 @@
       y: panOrigin.y + panDelta.y + e.detail.deltaY
     }), bounds);
 
-    if (oob) {
-      currentMoveOutOfBoundsDelta = {
-        x: (e.detail.deltaX - currentMoveWithinBoundsDelta.x) * 0.5,
-        y: (e.detail.deltaY - currentMoveWithinBoundsDelta.y) * 0.5,
-      }
-    } else {
-      currentMoveWithinBoundsDelta = {
-        x: e.detail.deltaX,
-        y: e.detail.deltaY,
-      }
+    currentMoveOutOfBoundsDelta = {
+      x: oob && oob.x != 0 ? (e.detail.deltaX - currentMoveWithinBoundsDelta.x) * 0.5 : currentMoveOutOfBoundsDelta.x,
+      y: oob && oob.y != 0 ? (e.detail.deltaY - currentMoveWithinBoundsDelta.y) * 0.5 : currentMoveOutOfBoundsDelta.y,
     }
 
-    console.log(e.detail);
+    currentMoveWithinBoundsDelta = {
+      x: oob && oob.x != 0 ? currentMoveWithinBoundsDelta.x : e.detail.deltaX,
+      y: oob && oob.y != 0 ? currentMoveWithinBoundsDelta.y : e.detail.deltaY,
+    }
 
     const x = panOrigin.x + panDelta.x + currentMoveDelta.x;
     const y = panOrigin.y + panDelta.y + currentMoveDelta.y;
@@ -467,8 +467,7 @@
   }
 
   function decelerate(friction: number, { x, y }: Point) {
-    /* if (outOfBounds(roundPoint(panDelta), roundBounds(panBounds))) friction = 0.8; */
-
+    const oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
 
     let speed = Math.sqrt(x * x + y * y);
     const angle = Math.atan2(y, x);
@@ -494,9 +493,11 @@
     }, 1)
 
     if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) {
-      let oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
       if (oob) {
-        // handle out of bounds movement back to within bounds
+        rAF = requestAnimationFrame(timestamp => {
+          if ((oob as Point).x != 0) moveBackWithinBounds("x", panDelta.x, (oob as Point).x, timestamp, timestamp);
+          if ((oob as Point).y != 0) moveBackWithinBounds("y", panDelta.y, (oob as Point).y, timestamp, timestamp);
+        })
       }
       return
     }
@@ -504,6 +505,21 @@
     rAF = requestAnimationFrame(() => {
       decelerate(friction, delta);
     });
+  }
+
+  function moveBackWithinBounds(coord: "x" | "y", initialValue: number, value: number, start: DOMHighResTimeStamp, time: DOMHighResTimeStamp) {
+    const duration = 300;
+    const elapsed = time - start;
+    const change = sineOut(elapsed / duration) * value;
+
+    panDelta[coord] = initialValue + change;
+    carousel[current][coord] = panOrigin[coord] + panDelta[coord];
+
+    if (elapsed < duration) {
+      rAF = requestAnimationFrame(timestamp => {
+        moveBackWithinBounds(coord, initialValue, value, start, timestamp);
+      });
+    }
   }
 
   let rAF: number;
