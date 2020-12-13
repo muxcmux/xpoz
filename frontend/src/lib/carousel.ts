@@ -14,7 +14,6 @@ export class CarouselItem {
   public y: number;
   public jumps: number;
   public pos: number;
-  public zoomedScale: number;
 
   constructor(pos: number) {
     this.item = null;
@@ -28,7 +27,6 @@ export class CarouselItem {
     this.y = 0;
     this.jumps = 0;
     this.pos = pos;
-    this.zoomedScale = 2.7;
   }
 
   setItem(item: GalleryItem<Asset> | null): CarouselItem {

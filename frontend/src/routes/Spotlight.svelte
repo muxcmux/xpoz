@@ -274,6 +274,17 @@
     }
   }
 
+  function keyboardNav(e: KeyboardEvent) {
+    if (e.key == "ArrowLeft") prev();
+    if (e.key == "ArrowRight") next();
+    if (e.key == "ArrowUp" || e.key == "Escape" || e.key == "ArrowDown") {
+      opacity = 0;
+      backdropOpacity = 0;
+      moveY = viewportHeight * (e.key == "ArrowDown" ? 1 : -1);
+      setTimeout(pop, 300);
+    }
+  }
+
   let viewportHeight: number;
   let viewportWidth: number;
 
@@ -294,8 +305,8 @@
   let swipes = 0;
   let zooming = false;
   const spacing = 20;
-  $: panThresholdForChange = viewportWidth / 4;
-  $: panThresholdForClose = viewportHeight / 5;
+  $: panThresholdForChange = viewportWidth / 5;
+  $: panThresholdForClose = viewportHeight / 6;
 
   function next() {
     swipes -= 1;
@@ -396,16 +407,17 @@
         y: carousel[current].y,
       }
 
-      carousel[current].scale = carousel[current].zoomedScale;
-      const diffX = (carousel[current].width * carousel[current].scale - carousel[current].width) / 2;
-      const diffY = (carousel[current].height * carousel[current].scale - carousel[current].height) / 2;
+      // Work out correct zoom with device pixel ratio and big image dimensions
+      // This will be useful when loading the render or original or zoom
+      carousel[current].scale = 2.6;
+
+      const diffX = (carousel[current].width * carousel[current].scale - Math.min(viewportWidth, carousel[current].width * carousel[current].scale)) / 2;
+      const diffY = (carousel[current].height * carousel[current].scale - Math.min(viewportHeight, carousel[current].height * carousel[current].scale)) / 2;
 
       panBounds = {
         min: { x: -diffX, y: -diffY },
         max: { x: diffX, y: diffY }
       }
-
-      console.log('original position', panOrigin);
     } else {
       carousel[current].scale = 1;
       carousel[current].x = panOrigin.x;
@@ -460,9 +472,9 @@
     panDelta.x = deltaX;
     panDelta.y = deltaY;
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       decelerate({ x: 0.92, y: 0.92 }, decelerationAmmount);
-    }, 16);
+    });
   }
 
   function decelerate(friction: Point, { x, y }: Point) {
@@ -473,10 +485,10 @@
     panDelta.x += delta.x;
     panDelta.y += delta.y;
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       carousel[current].x = panOrigin.x + panDelta.x;
       carousel[current].y = panOrigin.y + panDelta.y;
-    }, 1)
+    })
 
     if (oob && oob.x != 0) {
       friction.x = 0.5;
@@ -533,7 +545,7 @@
 
 </script>
 
-<svelte:window on:resize={onResize} bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
+<svelte:window on:resize={onResize} on:keyup={keyboardNav} bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
 
 <div class="spotlight" in:fade={{ duration: 150 }}>
   <div class="backdrop {panning == "vertical" ? 'no-transition' : ''}"
