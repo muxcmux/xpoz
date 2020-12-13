@@ -419,7 +419,6 @@
     cancelAnimationFrame(rAF);
     currentMoveWithinBoundsDelta = { x: 0, y: 0 };
     currentMoveOutOfBoundsDelta = { x: 0, y: 0 };
-
   }
 
   function zoomedMove(e: CustomEvent) {
@@ -462,27 +461,14 @@
     panDelta.y = deltaY;
 
     setTimeout(() => {
-      decelerate(0.3, decelerationAmmount);
+      decelerate({ x: 0.92, y: 0.92 }, decelerationAmmount);
     }, 16);
   }
 
-  function decelerate(friction: number, { x, y }: Point) {
+  function decelerate(friction: Point, { x, y }: Point) {
     const oob = outOfBounds(roundPoint(panDelta), roundBounds(panBounds));
 
-    let speed = Math.sqrt(x * x + y * y);
-    const angle = Math.atan2(y, x);
-    if (speed > friction) {
-      speed -= friction;
-    } else {
-      speed = 0;
-    }
-
-    friction += 0.02;
-
-    const delta = {
-      x: Math.cos(angle) * speed,
-      y: Math.sin(angle) * speed,
-    }
+    const delta = { x: x * friction.x, y: y * friction.y };
 
     panDelta.x += delta.x;
     panDelta.y += delta.y;
@@ -492,15 +478,25 @@
       carousel[current].y = panOrigin.y + panDelta.y;
     }, 1)
 
-    if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) {
-      if (oob) {
+    if (oob && oob.x != 0) {
+      friction.x = 0.5;
+      if (between(delta.x, -1, 1)) {
         rAF = requestAnimationFrame(timestamp => {
-          if ((oob as Point).x != 0) moveBackWithinBounds("x", panDelta.x, (oob as Point).x, timestamp, timestamp);
-          if ((oob as Point).y != 0) moveBackWithinBounds("y", panDelta.y, (oob as Point).y, timestamp, timestamp);
+          moveBackWithinBounds("x", panDelta.x, (oob as Point).x, timestamp, timestamp);
         })
       }
-      return
     }
+
+    if (oob && oob.y != 0) {
+      friction.y = 0.5
+      if (between(delta.y, -1, 1)) {
+        rAF = requestAnimationFrame(timestamp => {
+          moveBackWithinBounds("y", panDelta.y, (oob as Point).y, timestamp, timestamp);
+        })
+      }
+    }
+
+    if (between(delta.x, -1, 1) && between(delta.y, -1, 1)) return;
 
     rAF = requestAnimationFrame(() => {
       decelerate(friction, delta);
