@@ -434,7 +434,7 @@
   }
 
   function zoomedMove(e: CustomEvent) {
-    const bounds = carousel[current].getZoomedBoundsForOrigin(roundPoint(panOrigin));
+    const bounds = carousel[current].getBoundsForOrigin(roundPoint(panOrigin));
 
     const oob = outOfBounds(roundPoint({
       x: panOrigin.x + panDelta.x + e.detail.deltaX,

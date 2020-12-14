@@ -54,9 +54,9 @@ export class CarouselItem {
     return this;
   }
 
-  getZoomedBoundsForOrigin(origin: Point): Bounds {
-    const deltaX = (this.width * this.zoomedScale - this.width) / 2;
-    const deltaY = (this.height * this.zoomedScale - this.height) / 2;
+  getBoundsForOrigin(origin: Point): Bounds {
+    const deltaX = (this.width * this.scale - this.width) / 2;
+    const deltaY = (this.height * this.scale - this.height) / 2;
     const minX = origin.x - deltaX;
     const maxX = origin.x + deltaX;
     const minY = origin.y - deltaY;
