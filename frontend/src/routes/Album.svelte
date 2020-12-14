@@ -123,6 +123,8 @@
 <script lang="ts">
   import { isVisible } from "../utils/viewport";
   import { scale, fly } from "svelte/transition";
+  import fixtap from "../use/fixtap";
+  import { push } from "svelte-spa-router";
   import { onMount, tick } from "svelte";
   import { getAlbum } from "../gql/albums";
   import { operationStore, query } from "@urql/svelte";
@@ -216,7 +218,7 @@
     <div class="results">
       {#each gallery.items as item, i (item.uuid)}
         <figure in:scale="{{ duration: 350 }}">
-          <a href="/#/album/{album.uuid}?{i}">
+          <a href="/#/album/{album.uuid}?{i}" use:fixtap on:tap={() => push(`/album/${album.uuid}?${i}`)}>
             <ImageLoader uuid={item.uuid} variant="thumb" />
           </a>
         </figure>
