@@ -409,7 +409,11 @@
 
       // Work out correct zoom with device pixel ratio and big image dimensions
       // This will be useful when loading the render or original or zoom
-      carousel[current].scale = 2.6;
+      // For now just zoom enough to fill in the screen
+      let zoom = [2];
+      zoom.push(viewportWidth / carousel[current].width);
+      zoom.push(viewportHeight / carousel[current].height);
+      carousel[current].scale = Math.max(...zoom);
 
       const diffX = (carousel[current].width * carousel[current].scale - Math.min(viewportWidth, carousel[current].width * carousel[current].scale)) / 2;
       const diffY = (carousel[current].height * carousel[current].scale - Math.min(viewportHeight, carousel[current].height * carousel[current].scale)) / 2;
