@@ -1,7 +1,7 @@
-use actix_web::{web, post, get, HttpResponse, Result as AWResult};
-use async_graphql_actix_web::{Request, Response};
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use crate::db::Schema;
+use actix_web::{get, post, web, HttpResponse, Result as AWResult};
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+use async_graphql_actix_web::{Request, Response};
 
 #[post("/api")]
 async fn api(schema: web::Data<Schema>, req: Request) -> Response {
@@ -19,6 +19,5 @@ async fn graphiql() -> AWResult<HttpResponse> {
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(api)
-       .service(graphiql);
+    cfg.service(api).service(graphiql);
 }

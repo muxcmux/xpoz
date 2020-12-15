@@ -1,11 +1,11 @@
-use async_graphql::{Object, Context};
-use actix_files as fs;
-use sqlx::{query_as, sqlite::SqlitePool};
-use sql_builder::prelude::*;
-use anyhow::{Result, anyhow};
+use super::{Album, Entity};
 use crate::settings::Settings;
-use super::{Entity, Album};
+use actix_files as fs;
+use anyhow::{anyhow, Result};
+use async_graphql::{Context, Object};
 use glob::{glob_with, MatchOptions};
+use sql_builder::prelude::*;
+use sqlx::{query_as, sqlite::SqlitePool};
 use std::path::PathBuf;
 
 #[derive(sqlx::FromRow)]
@@ -20,22 +20,40 @@ pub struct Asset {
     longitude: f32,
     directory: String,
     filename: String,
-    duration: f32
+    duration: f32,
 }
 
 #[Object]
 impl Asset {
-    async fn id(&self) -> &i32 { &self.id }
-    async fn uuid(&self) -> &String { &self.uuid }
-    async fn created_at(&self) -> &String { &self.created_at }
-    async fn height(&self) -> &i32 { &self.height }
-    async fn width(&self) -> &i32 { &self.width }
-    async fn latitude(&self) -> &f32 { &self.latitude }
-    async fn longitude(&self) -> &f32 { &self.longitude }
-    async fn duration(&self) -> &f32 { &self.duration }
+    async fn id(&self) -> &i32 {
+        &self.id
+    }
+    async fn uuid(&self) -> &String {
+        &self.uuid
+    }
+    async fn created_at(&self) -> &String {
+        &self.created_at
+    }
+    async fn height(&self) -> &i32 {
+        &self.height
+    }
+    async fn width(&self) -> &i32 {
+        &self.width
+    }
+    async fn latitude(&self) -> &f32 {
+        &self.latitude
+    }
+    async fn longitude(&self) -> &f32 {
+        &self.longitude
+    }
+    async fn duration(&self) -> &f32 {
+        &self.duration
+    }
     async fn entity<'a>(&self, ctx: &'a Context<'_>) -> Option<&'a Entity> {
-        let cache = ctx.data::<Vec<Entity>>().expect("Failed getting entity cache");
-        cache.iter().find(|e| { e.id == self.entity_id })
+        let cache = ctx
+            .data::<Vec<Entity>>()
+            .expect("Failed getting entity cache");
+        cache.iter().find(|e| e.id == self.entity_id)
     }
 }
 
@@ -73,7 +91,7 @@ impl Asset {
         let options = MatchOptions {
             case_sensitive: false,
             require_literal_separator: false,
-            require_literal_leading_dot: false
+            require_literal_leading_dot: false,
         };
 
         path.push(self.directory.clone());
@@ -82,7 +100,8 @@ impl Asset {
 
         for ext in extensions.iter() {
             let pattern = format!("{}/{}*.{}", dir, self.uuid, ext);
-            for entry in glob_with(pattern.as_str(), options).expect("Failed to read glob pattern") {
+            for entry in glob_with(pattern.as_str(), options).expect("Failed to read glob pattern")
+            {
                 return Ok(fs::NamedFile::open(entry?)?);
             }
         }
@@ -92,9 +111,13 @@ impl Asset {
 }
 
 fn album_join_tables(cache: &Vec<Entity>) -> (String, String, String, String) {
-    let album = cache.iter().find(|e| { e.name == "Album" })
+    let album = cache
+        .iter()
+        .find(|e| e.name == "Album")
         .expect("Couldn't find an 'Album' entity in the entity cache");
-    let asset = cache.iter().find(|e| { e.name == "Asset" })
+    let asset = cache
+        .iter()
+        .find(|e| e.name == "Asset")
         .expect("Couldn't find a 'Asset' entity in the entity cache");
     let join_table = format!("Z_{}ASSETS as joins", album.id);
     let album_fk = format!("Z_{}ALBUMS", album.id);
@@ -115,12 +138,13 @@ fn base_select() -> SqlBuilder {
         "ZLONGITUDE as longitude",
         "ZDIRECTORY as directory",
         "ZFILENAME as filename",
-        "ZDURATION as duration"
+        "ZDURATION as duration",
     ];
 
     let mut builder = SqlBuilder::select_from("ZASSET as assets");
 
-    builder.fields(&fields)
+    builder
+        .fields(&fields)
         .and_where_lt("assets.ZTRASHEDSTATE", 1);
 
     builder
@@ -137,12 +161,19 @@ pub async fn asset(pool: &SqlitePool, uuid: &String) -> Result<Option<Asset>> {
     Ok(record)
 }
 
-pub async fn assets(pool: &SqlitePool, cache: &Vec<Entity>, album: &Album, offset: i32, limit: i32) -> Result<Vec<Asset>> {
+pub async fn assets(
+    pool: &SqlitePool,
+    cache: &Vec<Entity>,
+    album: &Album,
+    offset: i32,
+    limit: i32,
+) -> Result<Vec<Asset>> {
     let joins = album_join_tables(cache);
 
     let mut select = base_select();
 
-    select.join(joins.0)
+    select
+        .join(joins.0)
         .on(format!("joins.{} = assets.Z_PK", joins.2))
         .and_where_eq(format!("joins.{}", joins.1), album.id)
         .offset(offset)

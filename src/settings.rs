@@ -1,4 +1,4 @@
-use config::{ConfigError, Config, File, Environment};
+use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 use shellexpand::tilde;
 
@@ -14,7 +14,7 @@ pub struct Photos {
     pub originals: String,
     pub renders: String,
     pub resized: String,
-    pub thumbs: String
+    pub thumbs: String,
 }
 
 impl Photos {
@@ -49,18 +49,21 @@ impl Photos {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Settings {
     pub photos: Photos,
-    pub server: Server
+    pub server: Server,
 }
 
 fn set_defaults(config: &mut Config) {
     let defaults = [
         ["server.address", "0.0.0.0:1234"],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
-        ["photos.database", "~/Pictures/Photos Library.photoslibrary/database/Photos.sqlite"],
+        [
+            "photos.database",
+            "~/Pictures/Photos Library.photoslibrary/database/Photos.sqlite",
+        ],
         ["photos.originals", "originals"],
         ["photos.renders", "resources/renders"],
         ["photos.resized", "resources/derivatives"],
-        ["photos.thumbs", "resources/derivatives/masters"]
+        ["photos.thumbs", "resources/derivatives/masters"],
     ];
 
     for s in defaults.iter() {
@@ -77,5 +80,7 @@ impl Settings {
         config.try_into()
     }
 
-    pub fn default_file() -> &'static str { "settings.yml" }
+    pub fn default_file() -> &'static str {
+        "settings.yml"
+    }
 }

@@ -1,15 +1,15 @@
-use actix_files as fs;
-use anyhow::anyhow;
-use actix_web::{web, get, Result as AWResult, error::ErrorNotFound};
-use sqlx::sqlite::SqlitePool;
-use crate::settings::Settings;
 use crate::db::assets::asset;
+use crate::settings::Settings;
+use actix_files as fs;
+use actix_web::{error::ErrorNotFound, get, web, Result as AWResult};
+use anyhow::anyhow;
+use sqlx::sqlite::SqlitePool;
 
 #[get("/{variant}/{uuid}")]
 async fn get_asset(
     web::Path((variant, uuid)): web::Path<(String, String)>,
     settings: web::Data<Settings>,
-    pool: web::Data<SqlitePool>
+    pool: web::Data<SqlitePool>,
 ) -> AWResult<fs::NamedFile> {
     // std::thread::sleep_ms(500);
     let settings = settings.into_inner();
@@ -24,14 +24,11 @@ async fn get_asset(
             };
 
             Ok(file.map_err(|e| ErrorNotFound(e))?)
-        },
-        None => Err(ErrorNotFound(anyhow!("The requested asset was not found")))
+        }
+        None => Err(ErrorNotFound(anyhow!("The requested asset was not found"))),
     }
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(get_asset);
 }
-
-
-
