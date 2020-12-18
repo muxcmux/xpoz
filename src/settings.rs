@@ -1,11 +1,13 @@
 use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 use shellexpand::tilde;
+use std::env::args;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Server {
     pub address: String,
     pub public_dir: String,
+    pub graphiql: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -57,6 +59,7 @@ fn set_defaults(config: &mut Config) {
     let defaults = [
         ["server.address", "0.0.0.0:1234"],
         ["server.public_dir", "."],
+        ["server.graphiql", "true"],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
         [
             "photos.database",
@@ -85,4 +88,11 @@ impl Settings {
     pub fn default_file() -> &'static str {
         "settings.yml"
     }
+}
+
+pub fn load_settings() -> Settings {
+    let config_file = args()
+        .nth(1)
+        .unwrap_or_else(|| Settings::default_file().to_string());
+    Settings::from_file(&config_file).expect("Config error")
 }

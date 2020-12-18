@@ -10,10 +10,10 @@ use async_graphql::{EmptyMutation, EmptySubscription, Schema as AGSchema};
 use db::{
     entities::{entities, Entity},
     QueryRoot,
+    build_pool
 };
-use settings::Settings;
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use std::env::args;
+use settings::{Settings, load_settings};
+use sqlx::sqlite::SqlitePool;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -27,17 +27,9 @@ async fn main() -> Result<()> {
 }
 
 async fn configure() -> (Settings, SqlitePool, Vec<Entity>) {
-    let config_file = args()
-        .nth(1)
-        .unwrap_or_else(|| Settings::default_file().to_string());
-    let settings = Settings::from_file(&config_file).expect("Config error");
+    let settings = load_settings();
     log::debug!("{:?}", settings);
-    let pool = SqlitePoolOptions::new()
-        .idle_timeout(std::time::Duration::new(5, 0))
-        .max_connections(3)
-        .connect(&settings.photos.database_url())
-        .await
-        .expect("Can't open photos database");
+    let pool = build_pool(&settings).await;
     let entities = entities(&pool).await.expect("Can't load entities from db");
     (settings, pool, entities)
 }
@@ -59,13 +51,13 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
             .data(schema.clone())
             .wrap(Logger::default())
             .wrap(Compress::default())
-            .service(actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"))
             .service(
                 web::scope("/asset")
                     .wrap(DefaultHeaders::new().header("cache-control", "max-age=86400"))
                     .configure(services::files::config),
             )
             .configure(services::graphql::config)
+            .service(actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"))
     })
     .bind(address)?
     .run()

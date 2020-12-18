@@ -1,4 +1,4 @@
-use crate::db::Schema;
+use crate::{db::Schema, settings::load_settings};
 use actix_session::Session;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result as AWResult};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -27,5 +27,9 @@ async fn graphiql(session: Session, req: HttpRequest) -> AWResult<HttpResponse> 
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(api).service(graphiql);
+    cfg.service(api);
+    let settings = load_settings();
+    if settings.server.graphiql {
+        cfg.service(graphiql);
+    }
 }

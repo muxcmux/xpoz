@@ -8,7 +8,8 @@ use async_graphql::{
 
 use albums::{album, my_albums, Album};
 use entities::{entities, entity, Entity};
-use sqlx::SqlitePool;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use crate::settings::Settings;
 
 pub struct QueryRoot;
 
@@ -44,3 +45,12 @@ impl QueryRoot {
 }
 
 pub type Schema = AGSchema<QueryRoot, EmptyMutation, EmptySubscription>;
+
+pub async fn build_pool(settings: &Settings) -> SqlitePool {
+    SqlitePoolOptions::new()
+        .idle_timeout(std::time::Duration::new(5, 0))
+        .max_connections(3)
+        .connect(&settings.photos.database_url())
+        .await
+        .expect("Can't open photos database")
+}

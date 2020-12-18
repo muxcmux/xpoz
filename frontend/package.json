@@ -2,6 +2,7 @@
   "scripts": {
     "start": "snowpack dev",
     "build": "snowpack build",
+    "dev": "snowpack build --watch --out ../public",
     "test": "web-test-runner \"src/**/*.test.ts\"",
     "codegen": "graphql-codegen --config codegen.yml"
   },
