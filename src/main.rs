@@ -2,7 +2,7 @@ mod db;
 mod services;
 mod settings;
 
-use actix_cors::Cors;
+use actix_session::{CookieSession, Session};
 use actix_web::middleware::{Compress, DefaultHeaders, Logger};
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
@@ -49,17 +49,17 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
         .data(entity_cache)
         .finish();
     HttpServer::new(move || {
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_method()
-            .allow_any_header();
+        let session = CookieSession::signed(&[0; 32])
+            .secure(false)
+            .expires_in(365 * 24 * 60 * 60);
         App::new()
-            .wrap(cors)
+            .wrap(session)
             .data(settings.clone())
             .data(pool.clone())
             .data(schema.clone())
             .wrap(Logger::default())
             .wrap(Compress::default())
+            .service(actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"))
             .service(
                 web::scope("/asset")
                     .wrap(DefaultHeaders::new().header("cache-control", "max-age=86400"))

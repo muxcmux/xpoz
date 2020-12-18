@@ -15,7 +15,7 @@ const routes = {
   '/album/:uuid/*': Album
 }
 
-initClient({ url: "http://192.168.1.2:1234/api" });
+initClient({ url: "/api" });
 setVh();
 
 </script>

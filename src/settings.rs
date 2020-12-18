@@ -5,6 +5,7 @@ use shellexpand::tilde;
 #[derive(Clone, Debug, Deserialize)]
 pub struct Server {
     pub address: String,
+    pub public_dir: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -55,6 +56,7 @@ pub struct Settings {
 fn set_defaults(config: &mut Config) {
     let defaults = [
         ["server.address", "0.0.0.0:1234"],
+        ["server.public_dir", "."],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
         [
             "photos.database",
