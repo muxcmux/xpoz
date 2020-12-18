@@ -165,9 +165,9 @@
   import { onDestroy } from "svelte";
   import ImageLoader from "../components/ImageLoader.svelte";
   import touch from "../use/touch";
-  import { Gallery, GalleryItem } from "../lib/gallery";
+  import { Gallery } from "../lib/gallery";
   import { CarouselItem } from "../lib/carousel";
-  import { between, clamp, outOfBounds, roundBounds, roundPoint } from "../utils/math";
+  import { between, outOfBounds, roundBounds, roundPoint } from "../utils/math";
   import type { Point, Bounds } from "../utils/math";
 
   export let album: Album;
@@ -305,6 +305,7 @@
   let swipes = 0;
   let zooming = false;
   const spacing = 20;
+  const timeThresholdForChange = 200;
   $: panThresholdForChange = viewportWidth / 5;
   $: panThresholdForClose = viewportHeight / 6;
 
@@ -358,16 +359,16 @@
     moveY = 0;
 
     if (panning == "horizontal") {
-      if (hasPrev && e.detail.deltaX > panThresholdForChange) {
+      if (hasPrev && (e.detail.deltaX > panThresholdForChange || e.detail.deltaX > 0 && e.detail.deltaTime < timeThresholdForChange)) {
         prev();
-      } else if (hasNext && e.detail.deltaX < -panThresholdForChange) {
+      } else if (hasNext && (e.detail.deltaX < -panThresholdForChange || e.detail.deltaX < 0 && e.detail.deltaTime < timeThresholdForChange)) {
         next();
       } else {
         // reset
         moveX = swipes * (viewportWidth + spacing);
       }
     } else {
-      if (Math.abs(e.detail.deltaY) > panThresholdForClose) {
+      if (Math.abs(e.detail.deltaY) > panThresholdForClose || e.detail.deltaTime < timeThresholdForChange) {
         opacity = 0;
         backdropOpacity = 0;
         moveY = viewportHeight * Math.sign(e.detail.deltaY);
