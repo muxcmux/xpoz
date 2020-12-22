@@ -43,7 +43,7 @@
   let source: string | null = null;
 
   function getImagePath(uuid: string, variant: string): string {
-    const imageServer = "http://192.168.1.2:1234/asset";
+    const imageServer = "/asset";
     const variants:{[key:string]: string} = {
       original: `${imageServer}/original/${uuid}`,
       resized: `${imageServer}/resized/${uuid}`,
