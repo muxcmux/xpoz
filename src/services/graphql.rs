@@ -1,6 +1,5 @@
 use crate::{db::Schema, settings::load_settings};
-use actix_session::Session;
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Result as AWResult};
+use actix_web::{get, post, web, HttpResponse, Result as AWResult};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
 
@@ -11,14 +10,7 @@ async fn api(schema: web::Data<Schema>, req: Request) -> Response {
 }
 
 #[get("/api")]
-async fn graphiql(session: Session, req: HttpRequest) -> AWResult<HttpResponse> {
-    // let session_token = session.get::<String>("token");
-    // let token = req.query_string();
-    // session.set("token", &token);
-    // Ok(HttpResponse::Ok().body(format!(
-    //     "Token is: {:?}, Session token is: {:?}",
-    //     token, session_token
-    // )))
+async fn graphiql() -> AWResult<HttpResponse> {
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(playground_source(

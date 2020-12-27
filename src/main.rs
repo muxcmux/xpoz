@@ -1,18 +1,20 @@
+mod auth;
 mod db;
 mod services;
 mod settings;
 
-use actix_session::{CookieSession, Session};
+use actix_session::CookieSession;
 use actix_web::middleware::{Compress, DefaultHeaders, Logger};
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
 use async_graphql::{EmptyMutation, EmptySubscription, Schema as AGSchema};
+use auth::Auth;
 use db::{
+    build_pool,
     entities::{entities, Entity},
     QueryRoot,
-    build_pool
 };
-use settings::{Settings, load_settings};
+use settings::{load_settings, Settings};
 use sqlx::sqlite::SqlitePool;
 
 #[actix_web::main]
@@ -45,19 +47,23 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
             .secure(false)
             .expires_in(365 * 24 * 60 * 60);
         App::new()
-            .wrap(session)
             .data(settings.clone())
             .data(pool.clone())
             .data(schema.clone())
+            .wrap(Auth {})
+            .wrap(session)
             .wrap(Logger::default())
             .wrap(Compress::default())
+            .service(auth::auth)
             .service(
                 web::scope("/asset")
                     .wrap(DefaultHeaders::new().header("cache-control", "max-age=86400"))
                     .configure(services::files::config),
             )
             .configure(services::graphql::config)
-            .service(actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"))
+            .service(
+                actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"),
+            )
     })
     .bind(address)?
     .run()
