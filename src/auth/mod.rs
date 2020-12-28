@@ -1,15 +1,21 @@
 use std::pin::Pin;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::task::{Context, Poll};
 
+use crate::db::Databases;
 use actix_service::{Service, Transform};
 use actix_session::{Session, UserSession};
 use actix_web::{
     dev::ServiceRequest, dev::ServiceResponse, get, http::header, Error, HttpRequest, HttpResponse,
+    web,
     Result as AWResult,
 };
 use futures::future::{ok, Ready};
 use futures::Future;
 use nanoid::nanoid;
+use sqlx::{query_as, query, sqlite::SqlitePool};
+use sql_builder::prelude::*;
 
 // There are two steps in middleware processing.
 // 1. Middleware initialization, middleware factory gets called with
@@ -22,7 +28,7 @@ pub struct Auth;
 // `B` - type of response's body
 impl<S, B> Transform<S> for Auth
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -34,17 +40,17 @@ where
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ok(AuthMiddleware { service })
+        ok(AuthMiddleware { service: Rc::new(RefCell::new(service)) })
     }
 }
 
 pub struct AuthMiddleware<S> {
-    service: S,
+    service: Rc<RefCell<S>>,
 }
 
 impl<S, B> Service for AuthMiddleware<S>
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -58,32 +64,123 @@ where
     }
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
-        let session = req.get_session();
-
-        if let Ok(None) = session.get::<String>("id") {
-            let id = nanoid!();
-            session.set("id", id);
-        }
-
-        if req.path() == "/auth" || access_allowed(&session) {
-            let fut = self.service.call(req);
-            return Box::pin(async move { Ok(fut.await?) });
-        }
+        let mut srv = self.service.clone();
 
         Box::pin(
-            async move { Ok(req.into_response(HttpResponse::Unauthorized().finish().into_body())) },
+            async move {
+                let session = req.get_session();
+                let dbs = req
+                    .app_data::<web::Data<Databases>>()
+                    .expect("Can't get db pool from auth middleware")
+                    .get_ref();
+
+                if let Ok(None) = session.get::<String>("id") {
+                    let id = nanoid!();
+                    session.set("id", id);
+                }
+
+                if access_allowed(Some(&req.path()), &session, &dbs.auth).await {
+                    let fut = srv.call(req);
+                    Ok(fut.await?)
+                } else {
+                    Ok(req.into_response(HttpResponse::Unauthorized().finish().into_body()))
+                }
+            },
         )
     }
 }
+#[derive(sqlx::FromRow)]
+struct Access {
+    name: String,
+    single_use: bool,
+    admin: bool,
+    session_id: Option<String>,
+    token: String,
+    whitelist: String,
+    blacklist: String,
+}
 
-fn access_allowed(session: &Session) -> bool {
+async fn access_allowed(path: Option<&str>, session: &Session, pool: &SqlitePool) -> bool {
+    match path {
+        Some(p) => {
+            if p == "/auth" {
+                return true;
+            }
+            if p == "/admin" {
+                return admin_access_allowed(session, pool).await;
+            }
+            user_access_allowed(session, pool).await
+        },
+        None => user_access_allowed(session, pool).await
+    }
+}
+
+async fn admin_access_allowed(session: &Session, pool: &SqlitePool) -> bool {
     let session_token = session.get::<String>("token");
+    let session_id = session.get::<String>("id");
 
-    if let Ok(Some(v)) = session_token {
-        return v == "asd";
+    if let Ok(Some(token)) = session_token {
+        if let Ok(Some(id)) = session_id {
+            return access(pool, &id, &token, true).await;
+        }
+        return false;
+    }
+    false
+}
+
+async fn user_access_allowed(session: &Session, pool: &SqlitePool) -> bool {
+    let session_token = session.get::<String>("token");
+    let session_id = session.get::<String>("id");
+
+    if let Ok(Some(token)) = session_token {
+        if let Ok(Some(id)) = session_id {
+            return access(pool, &id, &token, false).await;
+        }
+        return false;
+    }
+    false
+}
+
+async fn access(pool: &SqlitePool, session_id: &str, token: &str, admin: bool) -> bool {
+    let mut builder = SqlBuilder::select_from("access");
+    builder.and_where("token = ?".bind(&token));
+
+    if admin {
+        builder.and_where_eq("admin", 1);
     }
 
-    false
+    builder.and_where("single_use = 0 OR (single_use = 1 AND (session_id IS NULL OR session_id = ?))".bind(&session_id));
+
+    builder.limit(1);
+
+    let result = query_as::<_, Access>(builder.sql().expect("Failed to build access query").as_str())
+        .fetch_optional(pool)
+        .await;
+
+    match result {
+        Ok(result) => {
+            if let Some(record) = result {
+                if record.single_use {
+                    consume_token(pool, &record.token, session_id).await;
+                }
+                return true
+            }
+            false
+        },
+        _ => false
+    }
+}
+
+async fn consume_token(pool: &SqlitePool, token: &str, session_id: &str) {
+    let update = SqlBuilder::update_table("access")
+        .set("session_id", &quote(session_id))
+        .and_where("token = ?".bind(&token))
+        .sql()
+        .expect("Failed SQL query when consuming auth token");
+
+    query(&update)
+        .execute(pool)
+        .await;
 }
 
 #[get("/auth")]

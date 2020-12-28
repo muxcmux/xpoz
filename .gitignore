@@ -7,3 +7,6 @@ web_modules
 node_modules
 /public
 .env
+.sqlite
+.sqlite-shm
+.sqlite-wal

@@ -20,6 +20,17 @@ pub struct Photos {
     pub thumbs: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct Auth {
+    pub database: String,
+}
+
+impl Auth {
+    pub fn database_url(&self) -> String {
+        format!("sqlite://{}", tilde(&self.database))
+    }
+}
+
 impl Photos {
     fn dir_to(&self, subdir: &String) -> std::path::PathBuf {
         let mut path = std::path::PathBuf::new();
@@ -53,6 +64,7 @@ impl Photos {
 pub struct Settings {
     pub photos: Photos,
     pub server: Server,
+    pub auth: Auth,
 }
 
 fn set_defaults(config: &mut Config) {
@@ -60,6 +72,7 @@ fn set_defaults(config: &mut Config) {
         ["server.address", "0.0.0.0:1234"],
         ["server.public_dir", "."],
         ["server.graphiql", "true"],
+        ["auth.database", "auth.sqlite"],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
         [
             "photos.database",

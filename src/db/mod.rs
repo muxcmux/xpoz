@@ -9,7 +9,6 @@ use async_graphql::{
 use albums::{album, my_albums, Album};
 use entities::{entities, entity, Entity};
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use crate::settings::Settings;
 
 pub struct QueryRoot;
 
@@ -29,7 +28,7 @@ impl QueryRoot {
             .map_err(Error::from)
     }
 
-    /// Get an album by it's uuid
+    /// Get an album by its uuid
     async fn album(&self, ctx: &Context<'_>, uuid: String) -> Result<Option<Album>> {
         album(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, &uuid)
             .await
@@ -46,11 +45,17 @@ impl QueryRoot {
 
 pub type Schema = AGSchema<QueryRoot, EmptyMutation, EmptySubscription>;
 
-pub async fn build_pool(settings: &Settings) -> SqlitePool {
+pub async fn build_pool(url: &str) -> SqlitePool {
     SqlitePoolOptions::new()
         .idle_timeout(std::time::Duration::new(5, 0))
         .max_connections(3)
-        .connect(&settings.photos.database_url())
+        .connect(url)
         .await
-        .expect("Can't open photos database")
+        .expect(&format!("Can't open database {}", url))
+}
+
+#[derive(Clone)]
+pub struct Databases {
+    pub photos: SqlitePool,
+    pub auth: SqlitePool
 }

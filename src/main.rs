@@ -11,11 +11,11 @@ use async_graphql::{EmptyMutation, EmptySubscription, Schema as AGSchema};
 use auth::Auth;
 use db::{
     build_pool,
+    Databases,
     entities::{entities, Entity},
     QueryRoot,
 };
 use settings::{load_settings, Settings};
-use sqlx::sqlite::SqlitePool;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -28,18 +28,23 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn configure() -> (Settings, SqlitePool, Vec<Entity>) {
+async fn configure() -> (Settings, Databases, Vec<Entity>) {
     let settings = load_settings();
     log::debug!("{:?}", settings);
-    let pool = build_pool(&settings).await;
-    let entities = entities(&pool).await.expect("Can't load entities from db");
-    (settings, pool, entities)
+    let photos_pool = build_pool(&settings.photos.database_url()).await;
+    let auth_pool = build_pool(&settings.auth.database_url()).await;
+    let entities = entities(&photos_pool).await.expect("Can't load entities from db");
+    let dbs = Databases {
+        photos: photos_pool,
+        auth: auth_pool,
+    };
+    (settings, dbs, entities)
 }
 
-async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) -> Result<()> {
+async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> Result<()> {
     let address = settings.server.address.clone();
     let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
-        .data(pool.clone())
+        .data(dbs.photos.clone())
         .data(entity_cache)
         .finish();
     HttpServer::new(move || {
@@ -48,7 +53,7 @@ async fn run(settings: Settings, pool: SqlitePool, entity_cache: Vec<Entity>) ->
             .expires_in(365 * 24 * 60 * 60);
         App::new()
             .data(settings.clone())
-            .data(pool.clone())
+            .data(dbs.clone())
             .data(schema.clone())
             .wrap(Auth {})
             .wrap(session)
