@@ -92,7 +92,7 @@ impl Album {
     }
 }
 
-fn base_select(entity: &Entity) -> SqlBuilder {
+fn base_select(entity: &Entity, whitelist: &Option<Vec<&str>>) -> SqlBuilder {
     let fields = [
         "Z_PK as id",
         "ZUUID as uuid",
@@ -117,13 +117,30 @@ fn base_select(entity: &Entity) -> SqlBuilder {
         .and_where_gt("ZCACHEDCOUNT", 0)
         .order_asc("Z_FOK_PARENTFOLDER");
 
+
+    if let Some(wl) = whitelist {
+        let allowed_uuids: Vec<String> = wl
+            .iter()
+            .map(|v| {
+                quote(v)
+            }).collect();
+        builder.and_where_in("ZUUID", &allowed_uuids);
+    }
+
     builder
 }
 
-pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, uuid: &String) -> Result<Option<Album>> {
+pub async fn album(
+    pool: &SqlitePool,
+    cache: &Vec<Entity>,
+    whitelist: &Option<Vec<&str>>,
+    uuid: &String,
+) -> Result<Option<Album>> {
     let entity = cache.iter().find(|e| e.name == "Album");
-    let mut select =
-        base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
+    let mut select = base_select(
+        entity.expect("Couldn't find an Album entity in the entity cache"),
+        whitelist,
+    );
     select.and_where("ZUUID = ?".bind(uuid));
 
     let result = query_as::<_, Album>(select.sql()?.as_str())
@@ -133,10 +150,17 @@ pub async fn album(pool: &SqlitePool, cache: &Vec<Entity>, uuid: &String) -> Res
     Ok(result)
 }
 
-pub async fn my_albums(pool: &SqlitePool, cache: &Vec<Entity>, page: i32) -> Result<Vec<Album>> {
+pub async fn my_albums(
+    pool: &SqlitePool,
+    cache: &Vec<Entity>,
+    whitelist: &Option<Vec<&str>>,
+    page: i32,
+) -> Result<Vec<Album>> {
     let entity = cache.iter().find(|e| e.name == "Album");
-    let mut select =
-        base_select(entity.expect("Couldn't find an Album entity in the entity cache"));
+    let mut select = base_select(
+        entity.expect("Couldn't find an Album entity in the entity cache"),
+        whitelist,
+    );
     select.offset(page * 10).limit(10);
     let records = query_as::<_, Album>(select.sql()?.as_str())
         .fetch_all(pool)

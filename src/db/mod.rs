@@ -9,6 +9,7 @@ use async_graphql::{
 use albums::{album, my_albums, Album};
 use entities::{entities, entity, Entity};
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use crate::auth::Access;
 
 pub struct QueryRoot;
 
@@ -30,14 +31,14 @@ impl QueryRoot {
 
     /// Get an album by its uuid
     async fn album(&self, ctx: &Context<'_>, uuid: String) -> Result<Option<Album>> {
-        album(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, &uuid)
+        album(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, &ctx.data::<Access>()?.whitelist(), &uuid)
             .await
             .map_err(Error::from)
     }
 
     /// "My Albums" which have been xpozed, keeping the original Photos sorting
     async fn my_albums(&self, ctx: &Context<'_>, page: i32) -> Result<Vec<Album>> {
-        my_albums(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, page)
+        my_albums(ctx.data::<SqlitePool>()?, ctx.data::<Vec<Entity>>()?, &ctx.data::<Access>()?.whitelist(), page)
             .await
             .map_err(Error::from)
     }

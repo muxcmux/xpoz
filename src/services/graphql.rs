@@ -1,12 +1,21 @@
+use crate::auth::Access;
 use crate::{db::Schema, settings::load_settings};
-use actix_web::{get, post, web, HttpResponse, Result as AWResult};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Result as AWResult};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
 
 #[post("/api")]
-async fn api(schema: web::Data<Schema>, req: Request) -> Response {
+async fn api(schema: web::Data<Schema>, req: HttpRequest, gql_req: Request) -> Response {
     // std::thread::sleep_ms(500);
-    schema.execute(req.into_inner()).await.into()
+    let access = req
+        .head()
+        .extensions()
+        .get::<Access>()
+        .expect("Can't get api access info")
+        .clone();
+    let mut gql_request = gql_req.into_inner();
+    gql_request = gql_request.data(access);
+    schema.execute(gql_request).await.into()
 }
 
 #[get("/api")]

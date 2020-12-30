@@ -7,6 +7,7 @@ use crate::db::Databases;
 use actix_service::{Service, Transform};
 use actix_session::{Session, UserSession};
 use actix_web::{
+    error::ErrorUnauthorized,
     dev::ServiceRequest, dev::ServiceResponse, get, http::header, Error, HttpRequest, HttpResponse,
     web,
     Result as AWResult,
@@ -79,32 +80,61 @@ where
                     session.set("id", id);
                 }
 
-                if access_allowed(Some(&req.path()), &session, &dbs.auth).await {
+                let access = access_allowed(Some(&req.path()), &session, &dbs.auth).await;
+
+
+                if let Some(a) = access {
+                    req.head().extensions_mut().insert(a);
                     let fut = srv.call(req);
                     Ok(fut.await?)
                 } else {
-                    Ok(req.into_response(HttpResponse::Unauthorized().finish().into_body()))
+                    Err(ErrorUnauthorized("unauthorized"))
                 }
             },
         )
     }
 }
-#[derive(sqlx::FromRow)]
-struct Access {
+
+const WHITELIST_SEPARATOR: &str = ",";
+
+#[derive(sqlx::FromRow, Clone)]
+pub struct Access {
     name: String,
     single_use: bool,
     admin: bool,
     session_id: Option<String>,
     token: String,
-    whitelist: String,
-    blacklist: String,
+    pub whitelist: Option<String>,
 }
 
-async fn access_allowed(path: Option<&str>, session: &Session, pool: &SqlitePool) -> bool {
+impl Access {
+    fn anonymous() -> Self {
+        Self {
+            name: "Anonymous".to_string(),
+            single_use: true,
+            admin: false,
+            session_id: None,
+            token: nanoid!(),
+            whitelist: None,
+        }
+    }
+
+    pub fn whitelist(&self) -> Option<Vec<&str>> {
+        match &self.whitelist {
+            None => None,
+            Some(v) => {
+                let split = v.split(WHITELIST_SEPARATOR);
+                Some(split.collect::<Vec<&str>>())
+            }
+        }
+    }
+}
+
+async fn access_allowed(path: Option<&str>, session: &Session, pool: &SqlitePool) -> Option<Access> {
     match path {
         Some(p) => {
             if p == "/auth" {
-                return true;
+                return Some(Access::anonymous());
             }
             if p == "/admin" {
                 return admin_access_allowed(session, pool).await;
@@ -115,7 +145,7 @@ async fn access_allowed(path: Option<&str>, session: &Session, pool: &SqlitePool
     }
 }
 
-async fn admin_access_allowed(session: &Session, pool: &SqlitePool) -> bool {
+async fn admin_access_allowed(session: &Session, pool: &SqlitePool) -> Option<Access> {
     let session_token = session.get::<String>("token");
     let session_id = session.get::<String>("id");
 
@@ -123,12 +153,12 @@ async fn admin_access_allowed(session: &Session, pool: &SqlitePool) -> bool {
         if let Ok(Some(id)) = session_id {
             return access(pool, &id, &token, true).await;
         }
-        return false;
+        return None;
     }
-    false
+    None
 }
 
-async fn user_access_allowed(session: &Session, pool: &SqlitePool) -> bool {
+async fn user_access_allowed(session: &Session, pool: &SqlitePool) -> Option<Access> {
     let session_token = session.get::<String>("token");
     let session_id = session.get::<String>("id");
 
@@ -136,12 +166,12 @@ async fn user_access_allowed(session: &Session, pool: &SqlitePool) -> bool {
         if let Ok(Some(id)) = session_id {
             return access(pool, &id, &token, false).await;
         }
-        return false;
+        return None;
     }
-    false
+    None
 }
 
-async fn access(pool: &SqlitePool, session_id: &str, token: &str, admin: bool) -> bool {
+async fn access(pool: &SqlitePool, session_id: &str, token: &str, admin: bool) -> Option<Access> {
     let mut builder = SqlBuilder::select_from("access");
     builder.and_where("token = ?".bind(&token));
 
@@ -163,11 +193,11 @@ async fn access(pool: &SqlitePool, session_id: &str, token: &str, admin: bool) -
                 if record.single_use {
                     consume_token(pool, &record.token, session_id).await;
                 }
-                return true
+                return Some(record)
             }
-            false
+            None
         },
-        _ => false
+        _ => None
     }
 }
 
