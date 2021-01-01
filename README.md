@@ -1,77 +1,96 @@
 # xpoz
-The result of a mashup of technologies I wanted to learn/play with.
 
-This app is two things really:
-
-1. A backend which serves my Apple Photos.app images as an API.
-2. A frontend image viewer / gallery.
-
-The idea, apart from learning all these technologies, is to be able to fire up
-a quick server for my images, so they can be shared with friends and family.
-
-I already manage all my photos in Photos.app, but sharing there is kinda weird
-and it's a pain if you want to share with anyone who doesn't have an Apple ID.
-I also have all the images organised into albums straight into Photos.app, and
-have basically zero requirements on authorisation (who can see what) - it's
-pretty much sharing everything with anyone I give access to the server.
-
-I do have plans to add more granular sharing functionalities in the future, like
-custom links which only allow access to certain albums, etc.
-
-## The backend
-
-This encompasses two of my learning goals: Rust lang and GraphQL. The backend is
-a server in Rust, built with Actix. It's really a bunch of creates working
-together: sqlx, async-graphql and a few others.
-
-It takes a config yaml with some options, like the destination to the Photos.app
-library and database file. Then it exposes two endpoints - a GraphQL endpoint
-which is used to get access to albums and images(assets) metadata, and another
-endpoint which serves a few different versions of my images.
+An API and a web gallery/viewer for your Apple's Photos.app albums.
 
 I wrote a [blog post](1) explaining how some of that stuff works a while back.
 
-This works great, because I have a mini server at home to which my entire
-`photoslibrary` syncs automatically. xpoz is hosted on that server and the
-config points to the backup. It is behind a https proxy with basic auth.
+## Building from source
 
-Currently, the backend works with the db schema of Photos 6.0, which is the one
-that ships with Big Sur. I did have to change a couple of table names here and
-there to make it work with this Photos.app version, so it should be trivial to
-add support for older versions.
+Currently there are no prebuilt binaries. The only option is to run xpoz from
+source.
 
-## The frontend
+### Requirements
 
-Originally I planned to have a go at Elm. I built the backend first and loved
-Rust's type system, so plain old JS was out of the question.
+1. A Photos.app >= 6.0 library (earlier versions should work with minor changes)
+2. Rust
+3. NodeJS
 
-I had a play with Elm, but found it to require too much code to get simple
-things off the ground. The compiler is absolutely awesome, but at this point
-it felt there were too many new things to learn and I just wanted to get this
-working soon. I had a look around and decided to try Svelte. It has typescript
-support and takes a novelty approach to reactivity.
+### Configuration
 
-Anyways, the frontend is quite simple, although I did build my own photo viewer
-from scratch (with touch support help from hammerjs). It has basic features at
-the moment, which are plenty enough for my needs, but I am actively working on
-this project and constantly shipping new features, like phisycs-like pan on
-mobile devices, etc. - fun stuff!
+If you are running on a Mac and you haven't changed the default location of the
+Photos library, then you shouldn't need any configuration. Otherwise, you have
+to tell xpoz where your Apple Photos library is located. You can provide
+configuration options in several different ways, but for development it's
+easiest to create an `.env` file:
 
-### Cool story bro, how do I run this?
+    XPOZ_PHOTOS__LIBRARY="/Users/you/Pictures/Photos Library.photoslibrary"
+    XPOZ_PHOTOS__DATABASE="/Users/you/Pictures/Photos Library.photoslibrary/database/Photos.sqlite"
 
-Git clone this repo, obviously. You need the standard Rust toolchain and then
-build with `cargo build --release`. The resulting binary accepts a config file
-as the first an only argument. You can have a look at the defaults in `src/
-settings.rs` and use those as keys in a yml to provide custom config.
+I'd also throw a `RUST_LOG=debug` in there for good measure. And please use full
+paths - support for tilde substitutions is incomplete.
 
-Frontend is a snowpack thing, so it's basically `cd` into `frontend` and `yarn
-start` to run it in development. I'm currently working on building an optimised
-prod version with webpack.
+Finally, create an empty dir from which xpoz will serve static files (the
+client):
 
-#### Alpha software
+    $ mkdir public
+
+There are some other configuration options. The defaults are defined in
+https://github.com/muxcmux/xpoz/blob/master/src/settings.rs and should be self-
+explanatory.
+
+### Server
+
+You need a recent Rust toolchain. Installation instructions are available on the
+[Rust lang website](2). Next run `cargo run`. Although subsequent runt are
+instant, it does take e bit the first time. If everything goes smoothly you
+should end up with a web server running a graphql api on port 1234 and serving
+static files from `./static` by default.
+
+Once done, create an access token:
+
+```
+$ sqlite3 xpoz.sqlite 'INSERT INTO access VALUES("admin", 0, 1, NULL, "password", NULL);'
+```
+
+### Client
+
+xpoz client is a Svelte app. I'm using [Snowpack](3) for development, which
+means you will need a modern browser with native modules support, etc.
+
+Navigate to `frontend` and install deps with `yarn`. When done run `yarn dev`
+which will compile files into `../public` and fire up a file watcher. With both
+the server and the client running, bring up a browser window and go to
+`http://localhost:1234/auth?password`.
+
+You should now be able to browse you Apple Photos.app albums from a web browser.
+
+## Why tho?
+
+Because I can and I need something to hack on during lockdown. Plus Photos.app
+sharing with people not on the Apple ecosystem (all of my friends/family) sucks
+big time. I also had fun building a viewer from scratch, trying out Svelte, Rust
+and GraphQL.
+
+## Alpha software
 
 All this is very early version thing and will undergo many chages, depending on
-how much free time I have and how much effort I put in it, so use at your own
-risk.
+how much free time I have and how much effort I put in it. Contributions are
+welcome! Use at your own risk.
+
+## Roadmap
+
+Coming soon or already in the works:
+
+  * ssl support
+  * "Admin ui" which allows creating and sharing access tokens easily
+  * Pre-built binaries for x86 macs / linux / aarch64
+
+Longer term stuff:
+
+  * More advanced photo viewing experience, pinch actions, desktop zoom, likes,
+  comments, etc.
+  * More features based on the metadata already available by Apple Photos
 
 [1]: https://www.tonkata.com/posts/apple-photos/
+[2]: https://www.rust-lang.org/tools/install
+[3]: https://www.snowpack.dev/
