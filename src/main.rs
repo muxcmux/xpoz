@@ -14,6 +14,7 @@ use db::{
     Databases,
     entities::{entities, Entity},
     QueryRoot,
+    migrate::migrate_database,
 };
 use settings::{load_settings, Settings};
 
@@ -31,12 +32,13 @@ async fn main() -> Result<()> {
 async fn configure() -> (Settings, Databases, Vec<Entity>) {
     let settings = load_settings();
     log::debug!("{:?}", settings);
+    migrate_database(&settings.app.database);
     let photos_pool = build_pool(&settings.photos.database_url()).await;
-    let auth_pool = build_pool(&settings.auth.database_url()).await;
+    let app_pool = build_pool(&settings.app.database_url()).await;
     let entities = entities(&photos_pool).await.expect("Can't load entities from db");
     let dbs = Databases {
         photos: photos_pool,
-        auth: auth_pool,
+        app: app_pool,
     };
     (settings, dbs, entities)
 }

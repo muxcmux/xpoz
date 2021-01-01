@@ -80,7 +80,7 @@ where
                     session.set("id", id);
                 }
 
-                let access = access_allowed(Some(&req.path()), &session, &dbs.auth).await;
+                let access = access_allowed(Some(&req.path()), &session, &dbs.app).await;
 
 
                 if let Some(a) = access {

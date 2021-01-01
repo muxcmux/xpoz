@@ -21,11 +21,11 @@ pub struct Photos {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct Auth {
+pub struct App {
     pub database: String,
 }
 
-impl Auth {
+impl App {
     pub fn database_url(&self) -> String {
         format!("sqlite://{}", tilde(&self.database))
     }
@@ -64,15 +64,14 @@ impl Photos {
 pub struct Settings {
     pub photos: Photos,
     pub server: Server,
-    pub auth: Auth,
+    pub app: App,
 }
 
 fn set_defaults(config: &mut Config) {
     let defaults = [
         ["server.address", "0.0.0.0:1234"],
-        ["server.public_dir", "."],
+        ["server.public_dir", "./public"],
         ["server.graphiql", "true"],
-        ["auth.database", "auth.sqlite"],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
         [
             "photos.database",
@@ -82,6 +81,7 @@ fn set_defaults(config: &mut Config) {
         ["photos.renders", "resources/renders"],
         ["photos.resized", "resources/derivatives"],
         ["photos.thumbs", "resources/derivatives/masters"],
+        ["app.database", "xpoz.sqlite"],
     ];
 
     for s in defaults.iter() {

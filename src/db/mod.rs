@@ -1,6 +1,7 @@
 mod albums;
 pub mod assets;
 pub mod entities;
+pub mod migrate;
 
 use async_graphql::{
     Context, EmptyMutation, EmptySubscription, Error, Object, Result, Schema as AGSchema,
@@ -58,5 +59,5 @@ pub async fn build_pool(url: &str) -> SqlitePool {
 #[derive(Clone)]
 pub struct Databases {
     pub photos: SqlitePool,
-    pub auth: SqlitePool
+    pub app: SqlitePool
 }
