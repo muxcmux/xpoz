@@ -2,7 +2,8 @@
 
 An API and a web gallery/viewer for your Apple's Photos.app albums.
 
-I wrote a [blog post](1) explaining how some of that stuff works a while back.
+I wrote a [blog post](https://www.tonkata.com/posts/apple-photos/)
+explaining how some of that stuff works a while back.
 
 ## Building from source
 
@@ -41,10 +42,10 @@ explanatory.
 ### Server
 
 You need a recent Rust toolchain. Installation instructions are available on the
-[Rust lang website](2). Next run `cargo run`. Although subsequent runt are
-instant, it does take e bit the first time. If everything goes smoothly you
-should end up with a web server running a graphql api on port 1234 and serving
-static files from `./static` by default.
+[Rust lang website](https://www.rust-lang.org/tools/install). Next run
+`cargo run`. Although subsequent runt are instant, it does take e bit the first
+time. If everything goes smoothly you should end up with a web server running a
+graphql api on port 1234 and serving static files from `./static` by default.
 
 Once done, create an access token:
 
@@ -54,8 +55,9 @@ $ sqlite3 xpoz.sqlite 'INSERT INTO access VALUES("admin", 0, 1, NULL, "password"
 
 ### Client
 
-xpoz client is a Svelte app. I'm using [Snowpack](3) for development, which
-means you will need a modern browser with native modules support, etc.
+xpoz client is a Svelte app. I'm using [Snowpack](https://www.snowpack.dev/)
+for development, which means you will need a modern browser with native modules
+support, etc.
 
 Navigate to `frontend` and install deps with `yarn`. When done run `yarn dev`
 which will compile files into `../public` and fire up a file watcher. With both
@@ -90,7 +92,3 @@ Longer term stuff:
   * More advanced photo viewing experience, pinch actions, desktop zoom, likes,
   comments, etc.
   * More features based on the metadata already available by Apple Photos
-
-[1]: https://www.tonkata.com/posts/apple-photos/
-[2]: https://www.rust-lang.org/tools/install
-[3]: https://www.snowpack.dev/
