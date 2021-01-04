@@ -83,7 +83,7 @@ welcome! Use at your own risk.
 
 Coming soon or already in the works:
 
-  * ssl support
+  * ~ssl support [#19](https://github.com/muxcmux/xpoz/issues/19)~
   * "Admin ui" which allows creating and sharing access tokens easily
   * Pre-built binaries for x86 macs / linux / aarch64
 
