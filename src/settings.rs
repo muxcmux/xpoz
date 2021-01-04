@@ -8,6 +8,9 @@ pub struct Server {
     pub address: String,
     pub public_dir: String,
     pub graphiql: bool,
+    pub ssl: bool,
+    pub cert: String,
+    pub key: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -72,6 +75,9 @@ fn set_defaults(config: &mut Config) {
         ["server.address", "0.0.0.0:1234"],
         ["server.public_dir", "./public"],
         ["server.graphiql", "true"],
+        ["server.ssl", "false"],
+        ["server.key", "cert/key.pem"],
+        ["server.cert", "cert/cert.pem"],
         ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
         [
             "photos.database",

@@ -11,11 +11,11 @@ use async_graphql::{EmptyMutation, EmptySubscription, Schema as AGSchema};
 use auth::Auth;
 use db::{
     build_pool,
-    Databases,
     entities::{entities, Entity},
-    QueryRoot,
     migrate::migrate_database,
+    Databases, QueryRoot,
 };
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use settings::{load_settings, Settings};
 
 #[actix_web::main]
@@ -35,7 +35,9 @@ async fn configure() -> (Settings, Databases, Vec<Entity>) {
     migrate_database(&settings.app.database);
     let photos_pool = build_pool(&settings.photos.database_url()).await;
     let app_pool = build_pool(&settings.app.database_url()).await;
-    let entities = entities(&photos_pool).await.expect("Can't load entities from db");
+    let entities = entities(&photos_pool)
+        .await
+        .expect("Can't load entities from db");
     let dbs = Databases {
         photos: photos_pool,
         app: app_pool,
@@ -44,12 +46,12 @@ async fn configure() -> (Settings, Databases, Vec<Entity>) {
 }
 
 async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> Result<()> {
-    let address = settings.server.address.clone();
+    let server_settings = settings.server.clone();
     let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .data(dbs.photos.clone())
         .data(entity_cache)
         .finish();
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         let session = CookieSession::signed(&[0; 32])
             .secure(false)
             .expires_in(365 * 24 * 60 * 60);
@@ -71,10 +73,23 @@ async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> R
             .service(
                 actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"),
             )
-    })
-    .bind(address)?
-    .run()
-    .await?;
+    });
+
+    if server_settings.ssl {
+        let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
+            .expect("Failed initialising ssl builder");
+        builder.set_private_key_file(&server_settings.key, SslFiletype::PEM)
+            .expect("Can't set up private key file. Is your key file configured correctly?");
+        builder
+            .set_certificate_chain_file(&server_settings.cert)
+            .expect("Can't set up certificate chain file. Is your cert file configured correctly?");
+        let _ = server
+            .bind_openssl(&server_settings.address, builder)?
+            .run()
+            .await;
+    } else {
+        let _ = server.bind(&server_settings.address)?.run().await;
+    }
 
     Ok(())
 }
