@@ -10,7 +10,7 @@ edition = "2018"
 actix-web = { version = "3", features = ["openssl"] }
 openssl = "0.10"
 actix-service = "1.0.6"
-actix-files = "0.4"
+actix-files = "0.5"
 actix-session = "0.4"
 futures = "0.3"
 nanoid = "0.3"
