@@ -77,7 +77,7 @@ where
 
                 if let Ok(None) = session.get::<String>("id") {
                     let id = nanoid!();
-                    session.set("id", id);
+                    let _ = session.set("id", id);
                 }
 
                 let access = access_allowed(Some(&req.path()), &session, &dbs.app).await;
@@ -208,7 +208,7 @@ async fn consume_token(pool: &SqlitePool, token: &str, session_id: &str) {
         .sql()
         .expect("Failed SQL query when consuming auth token");
 
-    query(&update)
+    let _ = query(&update)
         .execute(pool)
         .await;
 }
@@ -218,7 +218,7 @@ pub async fn auth(session: Session, req: HttpRequest) -> AWResult<HttpResponse> 
     let token = req.query_string();
 
     if token != "" {
-        session.set("token", token);
+        let _ = session.set("token", token);
     }
 
     Ok(HttpResponse::Found()
