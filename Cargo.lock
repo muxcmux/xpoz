@@ -3701,7 +3701,6 @@ dependencies = [
  "shellexpand",
  "sql-builder",
  "sqlx",
- "thiserror",
 ]
 
 [[package]]
