@@ -7,13 +7,13 @@ use actix_session::CookieSession;
 use actix_web::middleware::{Compress, DefaultHeaders, Logger};
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
-use async_graphql::{EmptyMutation, EmptySubscription, Schema as AGSchema};
+use async_graphql::{EmptySubscription, Schema as AGSchema};
 use auth::Auth;
 use db::{
     build_pool,
     entities::{entities, Entity},
     migrate::migrate_database,
-    Databases, QueryRoot,
+    Databases, MutationRoot, QueryRoot,
 };
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use settings::{load_settings, Settings};
@@ -47,8 +47,8 @@ async fn configure() -> (Settings, Databases, Vec<Entity>) {
 
 async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> Result<()> {
     let server_settings = settings.server.clone();
-    let schema = AGSchema::build(QueryRoot, EmptyMutation, EmptySubscription)
-        .data(dbs.photos.clone())
+    let schema = AGSchema::build(QueryRoot, MutationRoot, EmptySubscription)
+        .data(dbs.clone())
         .data(entity_cache)
         .finish();
     let server = HttpServer::new(move || {
@@ -78,7 +78,8 @@ async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> R
     if server_settings.ssl {
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
             .expect("Failed initialising ssl builder");
-        builder.set_private_key_file(&server_settings.key, SslFiletype::PEM)
+        builder
+            .set_private_key_file(&server_settings.key, SslFiletype::PEM)
             .expect("Can't set up private key file. Is your key file configured correctly?");
         builder
             .set_certificate_chain_file(&server_settings.cert)

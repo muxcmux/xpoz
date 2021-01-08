@@ -1,6 +1,6 @@
 use super::{
     assets::{assets, assets_by_id, Asset},
-    Entity,
+    Databases, Entity,
 };
 use anyhow::Result;
 use async_graphql::{Context, Object, Result as AGResult};
@@ -56,7 +56,7 @@ impl Album {
 
     async fn assets(&self, ctx: &Context<'_>, offset: i32, limit: i32) -> AGResult<Vec<Asset>> {
         let assets = assets(
-            ctx.data::<SqlitePool>()?,
+            &ctx.data::<Databases>()?.photos,
             ctx.data::<Vec<Entity>>()?,
             &self,
             offset,
@@ -81,7 +81,7 @@ impl Album {
             }
         }
 
-        let mut assets = assets_by_id(ctx.data::<SqlitePool>()?, &ids).await?;
+        let mut assets = assets_by_id(&ctx.data::<Databases>()?.photos, &ids).await?;
         assets.sort_by(|a, b| {
             let a_pos = &ids.iter().position(|&s| s == a.id);
             let b_pos = &ids.iter().position(|&s| s == b.id);
@@ -117,13 +117,8 @@ fn base_select(entity: &Entity, whitelist: &Option<Vec<&str>>) -> SqlBuilder {
         .and_where_gt("ZCACHEDCOUNT", 0)
         .order_asc("Z_FOK_PARENTFOLDER");
 
-
     if let Some(wl) = whitelist {
-        let allowed_uuids: Vec<String> = wl
-            .iter()
-            .map(|v| {
-                quote(v)
-            }).collect();
+        let allowed_uuids: Vec<String> = wl.iter().map(|v| quote(v)).collect();
         builder.and_where_in("ZUUID", &allowed_uuids);
     }
 

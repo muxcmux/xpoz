@@ -49,6 +49,9 @@ impl Asset {
     async fn duration(&self) -> &f32 {
         &self.duration
     }
+    async fn is_video(&self) -> bool {
+        &self.duration > &0f32
+    }
     async fn entity<'a>(&self, ctx: &'a Context<'_>) -> Option<&'a Entity> {
         let cache = ctx
             .data::<Vec<Entity>>()

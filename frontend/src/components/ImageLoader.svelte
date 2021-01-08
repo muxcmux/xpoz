@@ -96,7 +96,6 @@
     preloaders.thumb.src = getImagePath(uuid, "thumb");
 
     if (variant != "thumb") {
-
       preloaders.image = new Image();
 
       preloaders.image.onload = () => {

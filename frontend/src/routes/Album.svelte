@@ -26,82 +26,12 @@
     }
   }
 
-  header { margin: 1em .6em; }
-
-  h1 {
-    margin: 0;
-    color: var(--color-fg);
-    font-weight: 700;
-    font-size: 1.1em;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    a {
-      display: block;
-      height: 1.3em;
-      width: 1.2em;
-
-      svg {
-        width: 100%;
-        height: 100%;
-        stroke-width: 3;
-      }
-    }
-
-    span {
-      margin-right: 1.1em;
-      flex: 1;
-      padding: 0 .5em;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  h2 {
-    color: var(--color-fg);
-    font-weight: 400;
-    font-size: 1em;
-    opacity: .5;
-    margin-top: .5em;
-    margin-bottom: .5em;
-    text-align: center;
-
-    span {
-      padding-left: .5em;
-
-      &:first-of-type { padding-left: 0 }
-    }
-  }
-
   @media screen and (min-width: 30em) {
     .results {
       padding: 0 1em;
       gap: 1em 2em;
       grid-template-columns: repeat(5, 1fr);
       grid-auto-rows: calc((100vw - 4em) / 5);
-    }
-
-    h1 {
-      font-size: 1.5em;
-
-      span { text-align: left }
-
-      a {
-        width: 1em;
-        height: 1.1em;
-
-        svg { stroke-width: 2 }
-      }
-    }
-
-    h2 { text-align: left }
-
-    header {
-      border-bottom: 1px solid rgba(255, 255, 255, .2);
-      margin: 1em;
     }
   }
 

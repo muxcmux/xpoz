@@ -8,11 +8,13 @@ import { initClient } from '@urql/svelte';
 import setVh from './utils/vh_fix';
 import Albums from "./routes/Albums.svelte";
 import Album from "./routes/Album.svelte";
+import Admin from "./routes/Admin.svelte";
 
 const routes = {
   '/': Albums,
   '/album/:uuid': Album,
-  '/album/:uuid/*': Album
+  '/album/:uuid/*': Album,
+  '/admin': Admin
 }
 
 initClient({ url: "/api" });

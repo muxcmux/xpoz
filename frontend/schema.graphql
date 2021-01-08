@@ -1,0 +1,75 @@
+schema {
+  query: QueryRoot
+  mutation: MutationRoot
+}
+
+# Directs the executor to query only when the field exists.
+directive @ifdef on FIELD
+
+type Album {
+  id: Int!
+  uuid: String!
+  title: String
+  itemsCount: Int!
+  photosCount: Int!
+  videosCount: Int!
+  createdAt: String!
+  entity: Entity
+  assets(offset: Int!, limit: Int!): [Asset!]!
+  keyAssets: [Asset!]!
+}
+
+type Asset {
+  id: Int!
+  uuid: String!
+  createdAt: String!
+  height: Int!
+  width: Int!
+  latitude: Float!
+  longitude: Float!
+  duration: Float!
+  isVideo: Boolean!
+  entity: Entity
+}
+
+type Entity {
+  id: Int!
+  name: String!
+  parentId: Int
+  parent: Entity
+}
+
+type MutationRoot {
+  createToken(
+    name: String
+    sessionBound: Boolean!
+    admin: Boolean!
+    whitelist: String
+  ): Token
+}
+
+type QueryRoot {
+  # Gets a single entity by it's id
+  entity(id: Int!): Entity
+
+  # Returns all available entities in the photos app
+  entities: [Entity!]!
+
+  # Get an album by its uuid
+  album(uuid: String!): Album
+
+  # "My Albums" which have been xpozed, keeping the original Photos sorting
+  myAlbums(page: Int!): [Album!]!
+
+  # Returns the available access tokens
+  tokens: [Token!]!
+}
+
+type Token {
+  name: String!
+  sessionBound: Boolean!
+  admin: Boolean!
+  sessionId: String
+  token: String!
+  createdAt: String!
+}

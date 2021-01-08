@@ -9,6 +9,7 @@ export type Scalars = {
   Float: number;
 };
 
+
 export type Album = {
   __typename?: 'Album';
   id: Scalars['Int'];
@@ -25,7 +26,8 @@ export type Album = {
 
 
 export type AlbumAssetsArgs = {
-  page: Scalars['Int'];
+  offset: Scalars['Int'];
+  limit: Scalars['Int'];
 };
 
 export type Asset = {
@@ -38,6 +40,7 @@ export type Asset = {
   latitude: Scalars['Float'];
   longitude: Scalars['Float'];
   duration: Scalars['Float'];
+  isVideo: Scalars['Boolean'];
   entity?: Maybe<Entity>;
 };
 
@@ -49,16 +52,26 @@ export type Entity = {
   parent?: Maybe<Entity>;
 };
 
+export type MutationRoot = {
+  __typename?: 'MutationRoot';
+  createToken?: Maybe<Token>;
+};
+
+
+export type MutationRootCreateTokenArgs = {
+  name?: Maybe<Scalars['String']>;
+  sessionBound: Scalars['Boolean'];
+  admin: Scalars['Boolean'];
+  whitelist?: Maybe<Scalars['String']>;
+};
+
 export type QueryRoot = {
   __typename?: 'QueryRoot';
-  /** Gets a single entity by it's id */
   entity?: Maybe<Entity>;
-  /** Returns all available entities in the photos app */
   entities: Array<Entity>;
-  /** Get an album by it's uuid */
   album?: Maybe<Album>;
-  /** "My Albums" which have been xpozed, keeping the original Photos sorting */
   myAlbums: Array<Album>;
+  tokens: Array<Token>;
 };
 
 
@@ -74,4 +87,14 @@ export type QueryRootAlbumArgs = {
 
 export type QueryRootMyAlbumsArgs = {
   page: Scalars['Int'];
+};
+
+export type Token = {
+  __typename?: 'Token';
+  name: Scalars['String'];
+  sessionBound: Scalars['Boolean'];
+  admin: Scalars['Boolean'];
+  sessionId?: Maybe<Scalars['String']>;
+  token: Scalars['String'];
+  createdAt: Scalars['String'];
 };

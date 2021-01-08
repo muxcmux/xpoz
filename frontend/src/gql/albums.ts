@@ -25,6 +25,7 @@ export const getAlbum = `
         uuid
         width
         height
+        isVideo
       }
     }
   }
