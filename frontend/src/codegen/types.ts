@@ -55,6 +55,7 @@ export type Entity = {
 export type MutationRoot = {
   __typename?: 'MutationRoot';
   createToken?: Maybe<Token>;
+  deleteToken: Scalars['Int'];
 };
 
 
@@ -63,6 +64,11 @@ export type MutationRootCreateTokenArgs = {
   sessionBound: Scalars['Boolean'];
   admin: Scalars['Boolean'];
   whitelist?: Maybe<Scalars['String']>;
+};
+
+
+export type MutationRootDeleteTokenArgs = {
+  id: Scalars['String'];
 };
 
 export type QueryRoot = {

@@ -46,6 +46,7 @@ type MutationRoot {
     admin: Boolean!
     whitelist: String
   ): Token
+  deleteToken(id: String!): Int!
 }
 
 type QueryRoot {

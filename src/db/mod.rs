@@ -6,13 +6,11 @@ pub mod tokens;
 
 use albums::{album, my_albums, Album};
 use async_graphql::{
-    Context, EmptySubscription, Error, ErrorExtensions, Object, Result,
-    Schema as AGSchema,
+    Context, EmptySubscription, Error, ErrorExtensions, Object, Result, Schema as AGSchema,
 };
 use entities::{entities, entity, Entity};
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use tokens::{create_token, tokens, Token};
-
+use tokens::{create_token, delete_token, tokens, Token};
 
 pub async fn build_pool(url: &str) -> SqlitePool {
     SqlitePoolOptions::new()
@@ -24,11 +22,7 @@ pub async fn build_pool(url: &str) -> SqlitePool {
 }
 
 pub fn bool_to_insert_string(value: bool) -> String {
-    if value {
-        "1"
-    } else {
-        "0"
-    }.to_string()
+    if value { "1" } else { "0" }.to_string()
 }
 
 #[derive(Clone)]
@@ -99,11 +93,12 @@ pub struct MutationRoot;
 #[Object]
 impl MutationRoot {
     async fn create_token(
-        &self, ctx: &Context<'_>,
+        &self,
+        ctx: &Context<'_>,
         name: Option<String>,
         session_bound: bool,
         admin: bool,
-        whitelist: Option<String>
+        whitelist: Option<String>,
     ) -> Result<Option<Token>> {
         let token = ctx.data::<Token>()?;
         if token.admin {
@@ -118,7 +113,17 @@ impl MutationRoot {
             .map_err(Error::from)
         } else {
             Err(Error::new("Unauthorised").extend_with(|_, e| e.set("code", 401)))
+        }
+    }
 
+    async fn delete_token(&self, ctx: &Context<'_>, id: String) -> Result<u64> {
+        let token = ctx.data::<Token>()?;
+        if token.admin {
+            delete_token(&ctx.data::<Databases>()?.app, id)
+                .await
+                .map_err(Error::from)
+        } else {
+            Err(Error::new("Unauthorised").extend_with(|_, e| e.set("code", 401)))
         }
     }
 }

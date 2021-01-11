@@ -1,9 +1,9 @@
 use crate::db::bool_to_insert_string;
 use anyhow::Result;
-use async_graphql::{Context, Object, Result as AGResult};
+use async_graphql::Object;
 use nanoid::nanoid;
 use sql_builder::prelude::*;
-use sqlx::{query, query_as, sqlite::SqlitePool};
+use sqlx::{query, query_as, sqlite::SqlitePool, Done};
 
 const WHITELIST_SEPARATOR: &str = ",";
 
@@ -104,6 +104,15 @@ pub async fn create_token(
         .await?;
 
     Ok(result)
+}
+
+pub async fn delete_token(pool: &SqlitePool, token: String) -> Result<u64> {
+    let mut builder = SqlBuilder::delete_from("tokens");
+    builder.and_where("token = ?".bind(&token));
+
+    let result = query(builder.sql()?.as_str()).execute(pool).await?;
+
+    Ok(result.rows_affected())
 }
 
 pub async fn tokens(pool: &SqlitePool) -> Result<Vec<Token>> {
