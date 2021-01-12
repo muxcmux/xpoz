@@ -30,7 +30,7 @@
   type Variant = "original" | "resized" | "render" | "thumb";
   type State = "loading-thumb" | "loading" | "loaded" | "thumb-failed" | "failed";
 
-  export let uuid: string;
+  export let id: string;
   export let variant: Variant;
   export let alt: string = "";
 
@@ -42,13 +42,13 @@
   let state: State = "loading-thumb";
   let source: string | null = null;
 
-  function getImagePath(uuid: string, variant: string): string {
+  function getImagePath(id: string, variant: string): string {
     const imageServer = "/asset";
     const variants:{[key:string]: string} = {
-      original: `${imageServer}/original/${uuid}`,
-      resized: `${imageServer}/resized/${uuid}`,
-      render: `${imageServer}/render/${uuid}`,
-      thumb: `${imageServer}/thumb/${uuid}`
+      original: `${imageServer}/original/${id}`,
+      resized: `${imageServer}/resized/${id}`,
+      render: `${imageServer}/render/${id}`,
+      thumb: `${imageServer}/thumb/${id}`
     }
     return variants[variant];
   }
@@ -79,7 +79,7 @@
     preloaders.thumb.onload = () => {
       destroyLoader("thumb");
       if (state != "loaded") {
-        source = getImagePath(uuid, "thumb");
+        source = getImagePath(id, "thumb");
         state = variant == "thumb" ? "loaded" : "loading";
       }
     }
@@ -93,14 +93,14 @@
       }
     }
 
-    preloaders.thumb.src = getImagePath(uuid, "thumb");
+    preloaders.thumb.src = getImagePath(id, "thumb");
 
     if (variant != "thumb") {
       preloaders.image = new Image();
 
       preloaders.image.onload = () => {
         destroyLoader("image");
-        source = getImagePath(uuid, variant);
+        source = getImagePath(id, variant);
         state = "loaded";
       }
 
@@ -109,12 +109,12 @@
         state = "failed";
       }
 
-      preloaders.image.src = getImagePath(uuid, variant);
+      preloaders.image.src = getImagePath(id, variant);
     }
   }
 
   $: src = source;
-  $: if (uuid != null) preload()
+  $: if (id != null) preload()
 
 
 </script>

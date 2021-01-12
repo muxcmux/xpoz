@@ -44,6 +44,9 @@ impl Token {
 
 #[Object]
 impl Token {
+    async fn id(&self) -> &str {
+        &self.token
+    }
     async fn name(&self) -> &str {
         &self.name
     }
@@ -55,9 +58,6 @@ impl Token {
     }
     async fn session_id(&self) -> &Option<String> {
         &self.session_id
-    }
-    async fn token(&self) -> &str {
-        &self.token
     }
     async fn created_at(&self) -> &str {
         &self.created_at
@@ -106,13 +106,33 @@ pub async fn create_token(
     Ok(result)
 }
 
-pub async fn delete_token(pool: &SqlitePool, token: String) -> Result<u64> {
+pub async fn delete_token(pool: &SqlitePool, token: String) -> Result<Option<Token>> {
+    let existing = get_token(pool, &token).await?;
+
+    if let None = existing { return Ok(None); }
+
     let mut builder = SqlBuilder::delete_from("tokens");
     builder.and_where("token = ?".bind(&token));
 
     let result = query(builder.sql()?.as_str()).execute(pool).await?;
 
-    Ok(result.rows_affected())
+    if result.rows_affected() < 1 {
+        Ok(None)
+    } else {
+        Ok(existing)
+    }
+
+}
+
+async fn get_token(pool: &SqlitePool, token: &str) -> Result<Option<Token>> {
+    let mut builder = SqlBuilder::select_from("tokens");
+    builder.and_where("token = ?".bind(&token));
+
+    let result = query_as::<_, Token>(builder.sql()?.as_str())
+        .fetch_optional(pool)
+        .await?;
+
+    Ok(result)
 }
 
 pub async fn tokens(pool: &SqlitePool) -> Result<Vec<Token>> {

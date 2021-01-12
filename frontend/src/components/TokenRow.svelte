@@ -160,7 +160,7 @@ span {
 
   $: secondActionX = touchActionWidth + x / 2;
 
-  $: deleteX = x < confirmDeleteThreshold ? secondActionX - touchActionWidth - 8 : 0;
+  $: deleteX = x < confirmDeleteThreshold ? secondActionX - touchActionWidth - 5 : 0;
 </script>
 
 <div class="touch-controls">
@@ -212,12 +212,12 @@ span {
           <svg><use xlink:href="#i-lock"/></svg>
         {/if}
 
-        {token.token}
+        {token.id}
       </span>
     </div>
 
     <div class="right">
-      {#if copied == token.token}
+      {#if copied}
         <svg class="tick"><use xlink:href="#i-checkmark"/></svg>
       {:else}
         <svg class="copy" on:click|preventDefault={() => dispatch("copy", {token})}><use xlink:href="#i-link"/></svg>

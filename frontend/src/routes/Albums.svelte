@@ -135,11 +135,11 @@
 
 <section class="page">
   <div class="results">
-    {#each gallery.items as item (item.uuid)}
-      <a href="/#/album/{item.asset.uuid}" in:scale="{{ duration: 350}}">
+    {#each gallery.items as item (item.id)}
+      <a href="/#/album/{item.asset.id}" in:scale="{{ duration: 350}}">
         <figure>
           {#if item.asset.keyAssets[0]}
-            <ImageLoader uuid={item.asset.keyAssets[0].uuid} variant="thumb" alt={item.asset.title || "Album title"} />
+            <ImageLoader id={item.asset.keyAssets[0].id} variant="thumb" alt={item.asset.title || "Album title"} />
           {/if}
           <figcaption>
             {item.asset.title}

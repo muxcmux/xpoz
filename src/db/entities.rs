@@ -47,12 +47,3 @@ pub async fn entities(pool: &SqlitePool) -> Result<Vec<Entity>> {
     Ok(records)
 }
 
-pub async fn entity(pool: &SqlitePool, id: i32) -> Result<Option<Entity>> {
-    let mut select = base_select();
-    select.and_where_eq("Z_ENT", id);
-    let result = query_as::<_, Entity>(select.sql()?.as_str())
-        .fetch_optional(pool)
-        .await?;
-
-    Ok(result)
-}

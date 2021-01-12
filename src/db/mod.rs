@@ -8,7 +8,7 @@ use albums::{album, my_albums, Album};
 use async_graphql::{
     Context, EmptySubscription, Error, ErrorExtensions, Object, Result, Schema as AGSchema,
 };
-use entities::{entities, entity, Entity};
+use entities::Entity;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use tokens::{create_token, delete_token, tokens, Token};
 
@@ -35,27 +35,13 @@ pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
-    /// Gets a single entity by it's id
-    async fn entity(&self, ctx: &Context<'_>, id: i32) -> Result<Option<Entity>> {
-        entity(&ctx.data::<Databases>()?.photos, id)
-            .await
-            .map_err(Error::from)
-    }
-
-    /// Returns all available entities in the photos app
-    async fn entities(&self, ctx: &Context<'_>) -> Result<Vec<Entity>> {
-        entities(&ctx.data::<Databases>()?.photos)
-            .await
-            .map_err(Error::from)
-    }
-
-    /// Get an album by its uuid
-    async fn album(&self, ctx: &Context<'_>, uuid: String) -> Result<Option<Album>> {
+    /// Get an album by its id
+    async fn album(&self, ctx: &Context<'_>, id: String) -> Result<Option<Album>> {
         album(
             &ctx.data::<Databases>()?.photos,
             ctx.data::<Vec<Entity>>()?,
             &ctx.data::<Token>()?.whitelist(),
-            &uuid,
+            &id,
         )
         .await
         .map_err(Error::from)
@@ -116,7 +102,7 @@ impl MutationRoot {
         }
     }
 
-    async fn delete_token(&self, ctx: &Context<'_>, id: String) -> Result<u64> {
+    async fn delete_token(&self, ctx: &Context<'_>, id: String) -> Result<Option<Token>> {
         let token = ctx.data::<Token>()?;
         if token.admin {
             delete_token(&ctx.data::<Databases>()?.app, id)

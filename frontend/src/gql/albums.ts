@@ -2,27 +2,26 @@ export const getMyAlbums = `
   query($page: Int!) {
     myAlbums(page: $page) {
       id
-      uuid
       title
       photosCount
       videosCount
       createdAt
       keyAssets {
-        uuid
+        id
       }
     }
   }
 `;
 
 export const getAlbum = `
-  query($uuid: String!, $offset: Int!, $limit: Int!) {
-    album(uuid: $uuid) {
-      uuid
+  query($id: String!, $offset: Int!, $limit: Int!) {
+    album(id: $id) {
+      id
       title
       photosCount
       videosCount
       assets(offset: $offset, limit: $limit) {
-        uuid
+        id
         width
         height
         isVideo

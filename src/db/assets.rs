@@ -25,10 +25,7 @@ pub struct Asset {
 
 #[Object]
 impl Asset {
-    async fn id(&self) -> &i32 {
-        &self.id
-    }
-    async fn uuid(&self) -> &String {
+    async fn id(&self) -> &String {
         &self.uuid
     }
     async fn created_at(&self) -> &String {

@@ -1,5 +1,7 @@
 export type Maybe<T> = T | null;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: string;
@@ -12,14 +14,12 @@ export type Scalars = {
 
 export type Album = {
   __typename?: 'Album';
-  id: Scalars['Int'];
-  uuid: Scalars['String'];
+  id: Scalars['String'];
   title?: Maybe<Scalars['String']>;
   itemsCount: Scalars['Int'];
   photosCount: Scalars['Int'];
   videosCount: Scalars['Int'];
   createdAt: Scalars['String'];
-  entity?: Maybe<Entity>;
   assets: Array<Asset>;
   keyAssets: Array<Asset>;
 };
@@ -32,8 +32,7 @@ export type AlbumAssetsArgs = {
 
 export type Asset = {
   __typename?: 'Asset';
-  id: Scalars['Int'];
-  uuid: Scalars['String'];
+  id: Scalars['String'];
   createdAt: Scalars['String'];
   height: Scalars['Int'];
   width: Scalars['Int'];
@@ -55,7 +54,7 @@ export type Entity = {
 export type MutationRoot = {
   __typename?: 'MutationRoot';
   createToken?: Maybe<Token>;
-  deleteToken: Scalars['Int'];
+  deleteToken?: Maybe<Token>;
 };
 
 
@@ -73,21 +72,14 @@ export type MutationRootDeleteTokenArgs = {
 
 export type QueryRoot = {
   __typename?: 'QueryRoot';
-  entity?: Maybe<Entity>;
-  entities: Array<Entity>;
   album?: Maybe<Album>;
   myAlbums: Array<Album>;
   tokens: Array<Token>;
 };
 
 
-export type QueryRootEntityArgs = {
-  id: Scalars['Int'];
-};
-
-
 export type QueryRootAlbumArgs = {
-  uuid: Scalars['String'];
+  id: Scalars['String'];
 };
 
 
@@ -97,10 +89,10 @@ export type QueryRootMyAlbumsArgs = {
 
 export type Token = {
   __typename?: 'Token';
+  id: Scalars['String'];
   name: Scalars['String'];
   sessionBound: Scalars['Boolean'];
   admin: Scalars['Boolean'];
   sessionId?: Maybe<Scalars['String']>;
-  token: Scalars['String'];
   createdAt: Scalars['String'];
 };

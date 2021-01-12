@@ -12,7 +12,6 @@ pub struct Album {
     pub id: i32,
     uuid: String,
     title: Option<String>,
-    entity_id: i32,
     items_count: i32,
     photos_count: i32,
     videos_count: i32,
@@ -25,10 +24,7 @@ pub struct Album {
 
 #[Object]
 impl Album {
-    async fn id(&self) -> &i32 {
-        &self.id
-    }
-    async fn uuid(&self) -> &String {
+    async fn id(&self) -> &String {
         &self.uuid
     }
     async fn title(&self) -> &Option<String> {
@@ -45,13 +41,6 @@ impl Album {
     }
     async fn created_at(&self) -> &String {
         &self.created_at
-    }
-
-    async fn entity<'a>(&self, ctx: &'a Context<'_>) -> Option<&'a Entity> {
-        let cache = ctx
-            .data::<Vec<Entity>>()
-            .expect("Couldn't load entity cache");
-        cache.iter().find(|e| e.id == self.entity_id)
     }
 
     async fn assets(&self, ctx: &Context<'_>, offset: i32, limit: i32) -> AGResult<Vec<Asset>> {

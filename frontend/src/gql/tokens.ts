@@ -1,8 +1,8 @@
 export const getTokens = `
   query {
     tokens {
+      id
       name
-      token
       sessionId
       sessionBound
       admin
@@ -14,8 +14,8 @@ export const getTokens = `
 export const createToken = `
   mutation($name: String, sessionBound: Boolean!, $admin: Boolean!) {
     createToken(name: $name, sessionBound: $sessionBound, admin: $sessionBound) {
+      id
       name
-      token
       sessionId
       sessionBound
       admin
@@ -23,4 +23,12 @@ export const createToken = `
     }
   }
 `;
+
+export const removeToken = `
+  mutation($id: String!) {
+    deleteToken(id: $id) {
+      id
+    }
+  }
+`
 

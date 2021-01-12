@@ -7,21 +7,18 @@ schema {
 directive @ifdef on FIELD
 
 type Album {
-  id: Int!
-  uuid: String!
+  id: String!
   title: String
   itemsCount: Int!
   photosCount: Int!
   videosCount: Int!
   createdAt: String!
-  entity: Entity
   assets(offset: Int!, limit: Int!): [Asset!]!
   keyAssets: [Asset!]!
 }
 
 type Asset {
-  id: Int!
-  uuid: String!
+  id: String!
   createdAt: String!
   height: Int!
   width: Int!
@@ -46,18 +43,12 @@ type MutationRoot {
     admin: Boolean!
     whitelist: String
   ): Token
-  deleteToken(id: String!): Int!
+  deleteToken(id: String!): Token
 }
 
 type QueryRoot {
-  # Gets a single entity by it's id
-  entity(id: Int!): Entity
-
-  # Returns all available entities in the photos app
-  entities: [Entity!]!
-
-  # Get an album by its uuid
-  album(uuid: String!): Album
+  # Get an album by its id
+  album(id: String!): Album
 
   # "My Albums" which have been xpozed, keeping the original Photos sorting
   myAlbums(page: Int!): [Album!]!
@@ -67,10 +58,10 @@ type QueryRoot {
 }
 
 type Token {
+  id: String!
   name: String!
   sessionBound: Boolean!
   admin: Boolean!
   sessionId: String
-  token: String!
   createdAt: String!
 }

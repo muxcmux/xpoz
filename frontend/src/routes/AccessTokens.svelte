@@ -1,15 +1,27 @@
 <style lang="scss">
 ul {
   list-style: none;
-  padding: 1em 0 1em 1.5em;
-  margin: 0;
+  padding: 0 0 5em 1.5em;
+  margin: 1em 0;
   overflow: hidden;
+  position: relative;
 
   li {
     padding: 0;
     font-weight: 600;
     border-bottom: 1px solid rgba(255, 255, 255, .15);
     position: relative;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -50px;
+      bottom: 0;
+      width: 50px;
+      background: var(--color-bg);
+      z-index: 1;
+    }
   }
 
 }
@@ -21,18 +33,37 @@ ul {
 </style>
 
 <script lang="ts">
+  import { onDestroy, tick } from "svelte";
   import { fly } from "svelte/transition";
-  import { getTokens } from "./../gql/tokens";
-  import { operationStore, query } from "@urql/svelte";
+  import { quartOut } from "svelte/easing";
+  import { flip } from "svelte/animate";
+  import { getTokens, removeToken } from "./../gql/tokens";
+  import { mutation, operationStore, query } from "@urql/svelte";
   import type { Token } from "../codegen/types";
   import TokenRow from "../components/TokenRow.svelte";
   import fixtap from "../use/fixtap";
 
   const request = operationStore(getTokens);
+  // @ts-ignore
+  const deleteMutation = mutation({ query: removeToken });
+
+  let tokens: Token[] = [];
 
   query(request);
 
-  $: tokens = $request.data?.tokens as Token[] | null;
+  const unsubscribe = request.subscribe(value => {
+    let fetched = value.data?.tokens as Token[];
+    if (!value.fetching && fetched) {
+      const add: Token[] = [];
+      fetched.forEach(t => {
+        if (!tokens.find(i => i.id == t.id)) add.push(t);
+      });
+      tokens = [...tokens, ...add];
+    }
+  });
+
+  onDestroy(unsubscribe);
+
   $: confirmDeleteThreshold = -(viewportWidth * 4/5);
 
   let viewportWidth: number;
@@ -42,23 +73,31 @@ ul {
   let copied: string = "";
   let copyTimeout: number;
 
-  function deleteToken(e: CustomEvent) {
-
+  function deleteToken(id: string) {
+    moveX[id] = -viewportWidth;
+    tick().then(() => {
+      deleteMutation({ id: id });
+      tokens = tokens.filter(t => t.id != id);
+    })
   }
 
-  function copyLink(e: CustomEvent) {
+  function onDelete(e: CustomEvent) {
+    deleteToken(e.detail.token.id);
+  }
+
+  function onCopy(e: CustomEvent) {
     let token = e.detail.token;
     clearTimeout(copyTimeout);
     let input = document.getElementById('token-link') as HTMLInputElement;
-    let link = `${document.location.origin}/auth?${token.token}`;
+    let link = `${document.location.origin}/auth?${token.id}`;
     input.value = link;
     input.select();
     document.execCommand('copy');
-    copied = token.token;
+    copied = token.id;
     copyTimeout = setTimeout(() => {
       copied = "";
-      moveX[token.token] = 0;
-      lastX[token.token] = 0;
+      moveX[token.id] = 0;
+      lastX[token.id] = 0;
     }, 1e3);
   }
 
@@ -87,7 +126,11 @@ ul {
   function stopRevealing(e: CustomEvent) {
     if (swiping) {
       if (e.detail.deltaX < revealThreshold) {
-        moveX[currentlyMoving!] = -(2 * touchActionWidth);
+        if (e.detail.deltaX < confirmDeleteThreshold) {
+          deleteToken(currentlyMoving!);
+        } else {
+          moveX[currentlyMoving!] = -(2 * touchActionWidth);
+        }
       } else {
         moveX[currentlyMoving!] = 0;
       }
@@ -100,6 +143,13 @@ ul {
 
   function touchMove(e: Event) {
     if (swiping) e.preventDefault();
+  }
+
+  function slideUp(_node: Element, _opts: {}) {
+    return {
+      duration: 400,
+      css: (t: number) => `transform: translate3d(0, -${quartOut(1 - t) * 99}%, 0)`,
+    }
   }
 </script>
 
@@ -131,16 +181,18 @@ ul {
     <input type="text" id="token-link" readonly />
 
     <ul>
-      {#each tokens as token}
-        <li use:fixtap on:touchmove={touchMove} on:panstart={(e) => startRevealing(e, token.token)} on:panmove={reveal} on:panend={stopRevealing}>
-          <TokenRow x={moveX[token.token] || 0}
-                    copied={copied == token.token}
-                    dragging={currentlyMoving == token.token}
-                    {token}
-                    {confirmDeleteThreshold}
-                    {touchActionWidth}
-                    on:copy={copyLink}
-                    on:delete={deleteToken} />
+      {#each tokens as token (token.id)}
+        <li out:slideUp|local animate:flip|local={{ duration: 400, easing: quartOut }}>
+          <div use:fixtap on:touchmove={touchMove} on:panstart={(e) => startRevealing(e, token.id)} on:panmove={reveal} on:panend={stopRevealing}>
+            <TokenRow x={moveX[token.id] || 0}
+              copied={copied == token.id}
+              dragging={currentlyMoving == token.id}
+              {token}
+              {confirmDeleteThreshold}
+              {touchActionWidth}
+              on:copy={onCopy}
+              on:delete={onDelete} />
+          </div>
         </li>
       {/each}
     </ul>

@@ -197,7 +197,7 @@
   }
 
   const req = operationStore(getAlbum, {
-    uuid: album.uuid,
+    id: album.id,
     offset: loadPage * perPage,
     limit: perPage,
   });
@@ -569,7 +569,7 @@
                       top: {c.top}px;
                       transform: translate3d({c.x}px, {c.y}px, 0px) scale({c.scale})">
 
-            <ImageLoader uuid={c.item.uuid} variant="resized" alt={c.item.uuid} />
+            <ImageLoader id={c.item.id} variant="resized" alt={c.item.id} />
           </div>
         {/if}
       {/each}
@@ -585,8 +585,8 @@
 
     <!-- <ul>
       {#each gallery.items as item}
-        <li class="{itemInSpotlight?.item?.uuid == item.uuid ? 'selected' : ''}" in:scale>
-          <ImageLoader uuid={item.uuid} variant="thumb" alt={item.uuid} />
+        <li class="{itemInSpotlight?.item?.id == item.id ? 'selected' : ''}" in:scale>
+          <ImageLoader id={item.id} variant="thumb" alt={item.id} />
         </li>
       {/each}
     </ul> -->

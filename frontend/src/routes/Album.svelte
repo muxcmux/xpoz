@@ -64,7 +64,7 @@
   import ImageLoader from "../components/ImageLoader.svelte";
   import { Gallery } from "../lib/gallery";
 
-  export let params: { uuid?: string } = {};
+  export let params: { id?: string } = {};
 
   let infiniteScroll: HTMLElement;
   let gallery = new Gallery();
@@ -75,7 +75,7 @@
   const perPage = 10;
 
   const req = operationStore(getAlbum, {
-    uuid: params.uuid,
+    id: params.id,
     offset: 0,
     limit: perPage,
   });
@@ -146,10 +146,10 @@
     </header>
 
     <div class="results">
-      {#each gallery.items as item, i (item.uuid)}
+      {#each gallery.items as item, i (item.id)}
         <figure in:scale="{{ duration: 350 }}">
-          <a href="/#/album/{album.uuid}?{i}" use:fixtap on:tap={() => push(`/album/${album.uuid}?${i}`)}>
-            <ImageLoader uuid={item.uuid} variant="thumb" />
+          <a href="/#/album/{album.id}?{i}" use:fixtap on:tap={() => push(`/album/${album.id}?${i}`)}>
+            <ImageLoader id={item.id} variant="thumb" />
           </a>
         </figure>
       {/each}
