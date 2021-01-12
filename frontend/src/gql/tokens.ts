@@ -1,6 +1,7 @@
 export const getTokens = `
   query {
     tokens {
+      __typename
       id
       name
       sessionId
@@ -14,6 +15,7 @@ export const getTokens = `
 export const createToken = `
   mutation($name: String, sessionBound: Boolean!, $admin: Boolean!) {
     createToken(name: $name, sessionBound: $sessionBound, admin: $sessionBound) {
+      __typename
       id
       name
       sessionId
@@ -27,6 +29,7 @@ export const createToken = `
 export const removeToken = `
   mutation($id: String!) {
     deleteToken(id: $id) {
+      __typename
       id
     }
   }

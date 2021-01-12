@@ -7,7 +7,6 @@
     "codegen": "graphql-codegen --config codegen.yml"
   },
   "dependencies": {
-    "@urql/exchange-graphcache": "^3.3.4",
     "@urql/svelte": "^1.1.4",
     "graphql": "^15.4.0",
     "hammerjs": "^2.0.8",

@@ -1919,20 +1919,12 @@
   dependencies:
     "@types/node" "*"
 
-"@urql/core@>=1.16.1", "@urql/core@^1.16.0":
+"@urql/core@^1.16.0":
   version "1.16.1"
   resolved "https://registry.yarnpkg.com/@urql/core/-/core-1.16.1.tgz#a41487dd4436cbdc92fce714c6c1fc04315761d3"
   integrity sha512-lcEMCS/rB+ug7jKSRDVZIsqNhZxRooTNa1kHfvSjJT2k4SXDyPmjNSfXBUJF2pDJmvv9EIKl9Tk0AF1CvG3Q/g==
   dependencies:
     "@graphql-typed-document-node/core" "^3.1.0"
-    wonka "^4.0.14"
-
-"@urql/exchange-graphcache@^3.3.4":
-  version "3.3.4"
-  resolved "https://registry.yarnpkg.com/@urql/exchange-graphcache/-/exchange-graphcache-3.3.4.tgz#69988675ee05d9c7a7d5859419735d9fad3fa8f3"
-  integrity sha512-L7Wa+mpOCHTOSUNS7/GA8wF5Lj5+Su8N2BYiSSHC4TGD4zIffke8zjapEggshaPVPigRMEJLzlfJ5/348dF+cg==
-  dependencies:
-    "@urql/core" ">=1.16.1"
     wonka "^4.0.14"
 
 "@urql/svelte@^1.1.4":
