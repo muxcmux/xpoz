@@ -50,7 +50,7 @@ graphql api on port 1234 and serving static files from `./static` by default.
 Once done, create an access token:
 
 ```
-$ sqlite3 xpoz.sqlite 'INSERT INTO access VALUES("admin", 0, 1, NULL, "password", NULL);'
+$ sqlite3 xpoz.sqlite 'INSERT INTO tokens(name, token, admin, session_bound) VALUES("admin", "password", 1, 0);'
 ```
 
 ### Client
