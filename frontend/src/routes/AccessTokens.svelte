@@ -23,7 +23,27 @@ ul {
       z-index: 1;
     }
   }
+}
 
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: black;
+}
+
+.page {
+  background: var(--color-bg);
+  min-height: calc(var(--vh, 1vh) * 100);
+  height: 100%;
+  transition: transform .4s cubic-bezier(0.165, 0.84, 0.44, 1), border-radius .4s cubic-bezier(0.165, 0.84, 0.44, 1);
+
+  &.hide {
+    transform: scale(.92);
+    border-radius: 1.2em;
+  }
 }
 
 #token-link {
@@ -41,6 +61,7 @@ ul {
   import { mutation, operationStore, query } from "@urql/svelte";
   import type { Token } from "../codegen/types";
   import TokenRow from "../components/TokenRow.svelte";
+  import TokenForm from "../components/TokenForm.svelte";
   import fixtap from "../use/fixtap";
 
   const request = operationStore(getTokens);
@@ -48,6 +69,8 @@ ul {
   const deleteMutation = mutation({ query: removeToken });
 
   let tokens: Token[] = [];
+  let showForm = false;
+  let selectedToken: Token | null = null;
 
   query(request);
 
@@ -155,14 +178,16 @@ ul {
 
 <svelte:window bind:innerWidth={viewportWidth} />
 
-<section class="page">
+<div class="backdrop"></div>
+
+<section class="page" class:hide={showForm}>
   <header in:fly="{{ x: -40, duration: 400 }}">
     <h1>
       <a href="/#/" title="Back to albums">
         <svg><use xlink:href="#i-chevron-left"/></svg>
       </a>
       <span>Access Tokens</span>
-      <a href="/#/" title="Add token">
+      <a href="/#/" on:click|preventDefault={() => showForm = !showForm} title="Add token">
         <svg><use xlink:href="#i-plus"/></svg>
       </a>
     </h1>
@@ -199,3 +224,6 @@ ul {
   {/if}
 </section>
 
+{#if showForm}
+  <TokenForm on:close={() => showForm = !showForm} token={selectedToken} />
+{/if}
