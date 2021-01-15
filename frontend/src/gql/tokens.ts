@@ -8,13 +8,16 @@ export const getTokens = `
       sessionBound
       admin
       createdAt
+      whitelistedAlbums {
+        id
+      }
     }
   }
 `;
 
 export const createToken = `
-  mutation($name: String, sessionBound: Boolean!, $admin: Boolean!) {
-    createToken(name: $name, sessionBound: $sessionBound, admin: $sessionBound) {
+  mutation($input: TokenInput!) {
+    createToken(input: $input) {
       __typename
       id
       name
@@ -22,6 +25,18 @@ export const createToken = `
       sessionBound
       admin
       createdAt
+      whitelistedAlbums {
+        id
+      }
+    }
+  }
+`;
+
+export const updateToken = `
+  mutation($id: String!, $input: TokenInput!) {
+    updateToken(id: $id, input: $input) {
+      __typename
+      id
     }
   }
 `;

@@ -37,12 +37,8 @@ type Entity {
 }
 
 type MutationRoot {
-  createToken(
-    name: String
-    sessionBound: Boolean!
-    admin: Boolean!
-    whitelist: String
-  ): Token
+  createToken(input: TokenInput!): Token
+  updateToken(id: String!, input: TokenInput!): Token
   deleteToken(id: String!): Token
 }
 
@@ -51,7 +47,7 @@ type QueryRoot {
   album(id: String!): Album
 
   # "My Albums" which have been xpozed, keeping the original Photos sorting
-  myAlbums(page: Int!): [Album!]!
+  myAlbums(page: Int): [Album!]!
 
   # Returns the available access tokens
   tokens: [Token!]!
@@ -64,4 +60,12 @@ type Token {
   admin: Boolean!
   sessionId: String
   createdAt: String!
+  whitelistedAlbums: [Album!]
+}
+
+input TokenInput {
+  name: String!
+  sessionBound: Boolean!
+  admin: Boolean!
+  albumIds: [String!]
 }

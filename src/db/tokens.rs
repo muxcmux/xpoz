@@ -1,11 +1,20 @@
+use super::albums::{my_albums, Album, AllowedAlbumIds};
+use super::Databases;
+use super::entities::Entity;
 use crate::db::bool_to_insert_string;
 use anyhow::Result;
-use async_graphql::Object;
+use async_graphql::{Context, InputObject, Object, Result as AGResult};
 use nanoid::nanoid;
 use sql_builder::prelude::*;
 use sqlx::{query, query_as, sqlite::SqlitePool, Done};
 
-const WHITELIST_SEPARATOR: &str = ",";
+#[derive(InputObject)]
+pub struct TokenInput {
+    name: String,
+    session_bound: bool,
+    admin: bool,
+    album_ids: Option<Vec<String>>,
+}
 
 #[derive(sqlx::FromRow, Clone)]
 pub struct Token {
@@ -31,12 +40,13 @@ impl Token {
         }
     }
 
-    pub fn whitelist(&self) -> Option<Vec<&str>> {
+    pub fn whitelist(&self) -> AllowedAlbumIds {
         match &self.whitelist {
             None => None,
             Some(v) => {
-                let split = v.split(WHITELIST_SEPARATOR);
-                Some(split.collect::<Vec<&str>>())
+                let json: Result<AllowedAlbumIds> =
+                    serde_json::from_str(&v).map_err(anyhow::Error::from);
+                json.map_or_else(|_| None, |v| v)
             }
         }
     }
@@ -62,34 +72,38 @@ impl Token {
     async fn created_at(&self) -> &str {
         &self.created_at
     }
+    async fn whitelisted_albums(&self, ctx: &Context<'_>) -> AGResult<Option<Vec<Album>>> {
+        if let None = &self.whitelist {
+            return Ok(None);
+        }
+        Ok(Some(my_albums(
+            &ctx.data::<Databases>()?.photos,
+            ctx.data::<Vec<Entity>>()?,
+            &self.whitelist(),
+            None,
+        ).await?))
+    }
 }
 
-pub async fn create_token(
-    pool: &SqlitePool,
-    name: Option<String>,
-    session_bound: bool,
-    admin: bool,
-    whitelist: Option<String>,
-) -> Result<Option<Token>> {
+pub async fn create_token(pool: &SqlitePool, input: TokenInput) -> Result<Option<Token>> {
     let token = nanoid!();
 
     let mut builder = SqlBuilder::insert_into("tokens");
     builder.field("session_bound").field("admin").field("token");
 
     let mut values = vec![
-        bool_to_insert_string(session_bound),
-        bool_to_insert_string(admin),
+        bool_to_insert_string(input.session_bound),
+        bool_to_insert_string(input.admin),
         quote(&token),
     ];
 
-    if let Some(w) = whitelist {
-        builder.field("whitelist");
-        values.push(quote(&w));
-    }
+    builder.field("name");
+    values.push(quote(input.name));
 
-    if let Some(n) = name {
-        builder.field("name");
-        values.push(quote(n));
+    if let Some(w) = input.album_ids {
+        let album_ids = serde_json::to_string(&w)?;
+        builder.field("whitelist");
+        values.push(quote(&album_ids));
     }
 
     builder.values(&values);
@@ -106,10 +120,40 @@ pub async fn create_token(
     Ok(result)
 }
 
+pub async fn update_token(pool: &SqlitePool, token: &str, input: TokenInput) -> Result<Option<Token>> {
+    let mut builder = SqlBuilder::update_table("tokens");
+
+    builder.set("name", quote(&input.name))
+        .set("session_bound", bool_to_insert_string(input.session_bound))
+        .set("admin", bool_to_insert_string(input.admin));
+
+    if let Some(w) = input.album_ids {
+        let album_ids = serde_json::to_string(&w)?;
+        builder.set("whitelist", quote(&album_ids));
+    } else {
+        builder.set("whitelist", "NULL");
+    }
+
+    builder.and_where("token = ?".bind(&token));
+
+    query(builder.sql()?.as_str()).execute(pool).await?;
+
+    let mut finder = SqlBuilder::select_from("tokens");
+    finder.and_where("token = ?".bind(&token));
+
+    let result = query_as::<_, Token>(finder.sql()?.as_str())
+        .fetch_optional(pool)
+        .await?;
+
+    Ok(result)
+}
+
 pub async fn delete_token(pool: &SqlitePool, token: String) -> Result<Option<Token>> {
     let existing = get_token(pool, &token).await?;
 
-    if let None = existing { return Ok(None); }
+    if let None = existing {
+        return Ok(None);
+    }
 
     let mut builder = SqlBuilder::delete_from("tokens");
     builder.and_where("token = ?".bind(&token));
@@ -121,7 +165,6 @@ pub async fn delete_token(pool: &SqlitePool, token: String) -> Result<Option<Tok
     } else {
         Ok(existing)
     }
-
 }
 
 async fn get_token(pool: &SqlitePool, token: &str) -> Result<Option<Token>> {

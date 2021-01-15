@@ -7,6 +7,8 @@ use async_graphql::{Context, Object, Result as AGResult};
 use sql_builder::prelude::*;
 use sqlx::{query_as, sqlite::SqlitePool};
 
+pub type AllowedAlbumIds = Option<Vec<String>>;
+
 #[derive(sqlx::FromRow)]
 pub struct Album {
     pub id: i32,
@@ -81,7 +83,7 @@ impl Album {
     }
 }
 
-fn base_select(entity: &Entity, whitelist: &Option<Vec<&str>>) -> SqlBuilder {
+fn base_select(entity: &Entity, whitelist: &AllowedAlbumIds) -> SqlBuilder {
     let fields = [
         "Z_PK as id",
         "ZUUID as uuid",
@@ -117,7 +119,7 @@ fn base_select(entity: &Entity, whitelist: &Option<Vec<&str>>) -> SqlBuilder {
 pub async fn album(
     pool: &SqlitePool,
     cache: &Vec<Entity>,
-    whitelist: &Option<Vec<&str>>,
+    whitelist: &AllowedAlbumIds,
     uuid: &String,
 ) -> Result<Option<Album>> {
     let entity = cache.iter().find(|e| e.name == "Album");
@@ -137,15 +139,17 @@ pub async fn album(
 pub async fn my_albums(
     pool: &SqlitePool,
     cache: &Vec<Entity>,
-    whitelist: &Option<Vec<&str>>,
-    page: i32,
+    whitelist: &AllowedAlbumIds,
+    page: Option<i32>,
 ) -> Result<Vec<Album>> {
     let entity = cache.iter().find(|e| e.name == "Album");
     let mut select = base_select(
         entity.expect("Couldn't find an Album entity in the entity cache"),
         whitelist,
     );
-    select.offset(page * 10).limit(10);
+    if let Some(p) = page {
+        select.offset(p * 10).limit(10);
+    }
     let records = query_as::<_, Album>(select.sql()?.as_str())
         .fetch_all(pool)
         .await?;

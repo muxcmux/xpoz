@@ -3708,6 +3708,7 @@ dependencies = [
  "refinery",
  "rusqlite",
  "serde 1.0.118",
+ "serde_json",
  "shellexpand",
  "sql-builder",
  "sqlx",

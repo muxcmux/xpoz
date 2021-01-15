@@ -54,15 +54,19 @@ export type Entity = {
 export type MutationRoot = {
   __typename?: 'MutationRoot';
   createToken?: Maybe<Token>;
+  updateToken?: Maybe<Token>;
   deleteToken?: Maybe<Token>;
 };
 
 
 export type MutationRootCreateTokenArgs = {
-  name?: Maybe<Scalars['String']>;
-  sessionBound: Scalars['Boolean'];
-  admin: Scalars['Boolean'];
-  whitelist?: Maybe<Scalars['String']>;
+  input: TokenInput;
+};
+
+
+export type MutationRootUpdateTokenArgs = {
+  id: Scalars['String'];
+  input: TokenInput;
 };
 
 
@@ -84,7 +88,7 @@ export type QueryRootAlbumArgs = {
 
 
 export type QueryRootMyAlbumsArgs = {
-  page: Scalars['Int'];
+  page?: Maybe<Scalars['Int']>;
 };
 
 export type Token = {
@@ -95,4 +99,12 @@ export type Token = {
   admin: Scalars['Boolean'];
   sessionId?: Maybe<Scalars['String']>;
   createdAt: Scalars['String'];
+  whitelistedAlbums?: Maybe<Array<Album>>;
+};
+
+export type TokenInput = {
+  name: Scalars['String'];
+  sessionBound: Scalars['Boolean'];
+  admin: Scalars['Boolean'];
+  albumIds?: Maybe<Array<Scalars['String']>>;
 };

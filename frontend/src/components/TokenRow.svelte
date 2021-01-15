@@ -23,6 +23,13 @@
     stroke-width: 2;
     cursor: pointer;
     margin-left: .3em;
+
+    &.go {
+      width: 10px;
+      height: 10px;
+      opacity: .5;
+      stroke-width: 3;
+    }
   }
 }
 
@@ -112,15 +119,19 @@
   .touch-controls { display: flex }
 }
 
-svg.admin {
+svg.admin, svg.lock, svg.unlock {
   position: absolute;
   width: 16px;
   height: 16px;
   color: var(--color-darker-orange);
-  top: .8em;
+  top: .7em;
   left: -1.2em;
-  stroke-width: 3;
+  stroke-width: 2;
+
 }
+
+svg.lock { color: var(--color-red) }
+svg.unlock { color: var(--color-green) }
 
 time {
   opacity: .5;
@@ -133,6 +144,7 @@ span {
   display: flex;
   padding-top: .2em;
   font-weight: normal;
+  stroke-width: 2;
 
   svg {
     width: 16px;
@@ -161,6 +173,7 @@ span {
   $: secondActionX = touchActionWidth + x / 2;
 
   $: deleteX = x < confirmDeleteThreshold ? secondActionX - touchActionWidth - 5 : 0;
+
 </script>
 
 <div class="touch-controls">
@@ -174,7 +187,7 @@ span {
   {:else}
     <div class="tap-copy"
          class:transition={!dragging}
-         on:click|preventDefault={() => dispatch("copy", {token})}
+         on:click|preventDefault|stopPropagation={() => dispatch("copy", {token})}
          style="transform: translate3d({firstActionX}px, 0, 0)">
       <svg><use xlink:href="#i-link"/></svg>
       <small>Share</small>
@@ -182,7 +195,7 @@ span {
   {/if}
   <div class="tap-delete"
        class:transition={!dragging}
-       on:click|preventDefault={() => dispatch("delete", {token})}
+       on:click|preventDefault|stopPropagation={() => dispatch("delete", {token})}
        style="transform: translate3d({secondActionX}px, 0, 0)">
     <div class="tap-delete fast-transition"
          style="transform: translate3d({deleteX}px, 0, 0)">
@@ -200,19 +213,27 @@ span {
     <svg class="admin"><use xlink:href="#i-flag"/></svg>
   {/if}
 
+  {#if token.sessionBound}
+    {#if token.sessionId}
+      <svg class="lock"><use xlink:href="#i-lock"/></svg>
+    {:else}
+      <svg class="unlock"><use xlink:href="#i-unlock"/></svg>
+    {/if}
+  {/if}
+
   <div class="row">
     <div class="left">{token.name}</div>
-    <time class="right">{timeago.format(token.createdAt)}</time>
+    <div class="right row">
+      <time>{timeago.format(token.createdAt)}</time>
+      <svg class="go"><use xlink:href="#i-chevron-right"/></svg>
+    </div>
   </div>
 
   <div class="row">
     <div class="left">
       <span>
-        {#if token.sessionBound && token.sessionId}
-          <svg><use xlink:href="#i-lock"/></svg>
-        {/if}
-
-        {token.id}
+        <svg><use xlink:href="#i-picture"/></svg> {token.whitelistedAlbums == null ? "All" : token.whitelistedAlbums.length}
+        | {token.id}
       </span>
     </div>
 
@@ -220,9 +241,9 @@ span {
       {#if copied}
         <svg class="tick"><use xlink:href="#i-checkmark"/></svg>
       {:else}
-        <svg class="copy" on:click|preventDefault={() => dispatch("copy", {token})}><use xlink:href="#i-link"/></svg>
+        <svg class="copy" on:click|preventDefault|stopPropagation={() => dispatch("copy", {token})}><use xlink:href="#i-link"/></svg>
       {/if}
-      <svg class="delete" on:click|preventDefault={() => { if (confirm("Are you sure?")) dispatch("delete", {token})} }><use xlink:href="#i-trash"/></svg>
+      <svg class="delete" on:click|preventDefault|stopPropagation={() => { if (confirm("Are you sure?")) dispatch("delete", {token})} }><use xlink:href="#i-trash"/></svg>
     </div>
   </div>
 </div>

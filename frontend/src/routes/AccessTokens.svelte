@@ -59,7 +59,7 @@ ul {
   import { flip } from "svelte/animate";
   import { getTokens, removeToken } from "./../gql/tokens";
   import { mutation, operationStore, query } from "@urql/svelte";
-  import type { Token } from "../codegen/types";
+  import type { Token, TokenInput } from "../codegen/types";
   import TokenRow from "../components/TokenRow.svelte";
   import TokenForm from "../components/TokenForm.svelte";
   import fixtap from "../use/fixtap";
@@ -70,19 +70,13 @@ ul {
 
   let tokens: Token[] = [];
   let showForm = false;
-  let selectedToken: Token | null = null;
+  let selectedToken = tokenToInput(null);
 
   query(request);
 
   const unsubscribe = request.subscribe(value => {
     let fetched = value.data?.tokens as Token[];
-    if (!value.fetching && fetched) {
-      const add: Token[] = [];
-      fetched.forEach(t => {
-        if (!tokens.find(i => i.id == t.id)) add.push(t);
-      });
-      tokens = [...tokens, ...add];
-    }
+    if (!value.fetching && fetched) tokens = fetched;
   });
 
   onDestroy(unsubscribe);
@@ -95,6 +89,23 @@ ul {
 
   let copied: string = "";
   let copyTimeout: number;
+
+  function tokenToInput(t: Token | null): TokenInput {
+    if (t) {
+      return {
+        name: t.name,
+        admin: t.admin,
+        sessionBound: t.sessionBound,
+        albumIds: t.whitelistedAlbums?.map(a => a.id) || null,
+      }
+    }
+    return {
+      name: "",
+      admin: false,
+      sessionBound: false,
+      albumIds: null
+    }
+  }
 
   function deleteToken(id: string) {
     moveX[id] = -viewportWidth;
@@ -127,6 +138,7 @@ ul {
   let moveX: {[key: string]: number} = {};
   let lastX: {[key: string]: number} = {};
   let swiping = false;
+  let editTokenId: string | null = null;
   let currentlyMoving: string | null = null;
 
   function startRevealing(e: CustomEvent, id: string) {
@@ -174,6 +186,12 @@ ul {
       css: (t: number) => `transform: translate3d(0, -${quartOut(1 - t) * 99}%, 0)`,
     }
   }
+
+  function editToken(t: Token | null) {
+    selectedToken = tokenToInput(t);
+    showForm = !showForm;
+    editTokenId = t?.id || null;
+  }
 </script>
 
 <svelte:window bind:innerWidth={viewportWidth} />
@@ -187,7 +205,7 @@ ul {
         <svg><use xlink:href="#i-chevron-left"/></svg>
       </a>
       <span>Access Tokens</span>
-      <a href="/#/" on:click|preventDefault={() => showForm = !showForm} title="Add token">
+      <a href="/#/" on:click|preventDefault={() => editToken(null)} title="Add token">
         <svg><use xlink:href="#i-plus"/></svg>
       </a>
     </h1>
@@ -208,7 +226,11 @@ ul {
     <ul>
       {#each tokens as token (token.id)}
         <li out:slideUp|local animate:flip|local={{ duration: 400, easing: quartOut }}>
-          <div use:fixtap on:touchmove={touchMove} on:panstart={(e) => startRevealing(e, token.id)} on:panmove={reveal} on:panend={stopRevealing}>
+          <div use:fixtap on:click={() => editToken(token)}
+                          on:touchmove={touchMove}
+                          on:panstart={(e) => startRevealing(e, token.id)}
+                          on:panmove={reveal}
+                          on:panend={stopRevealing}>
             <TokenRow x={moveX[token.id] || 0}
               copied={copied == token.id}
               dragging={currentlyMoving == token.id}
@@ -225,5 +247,5 @@ ul {
 </section>
 
 {#if showForm}
-  <TokenForm on:close={() => showForm = !showForm} token={selectedToken} />
+  <TokenForm id={editTokenId} on:close={() => showForm = !showForm} tokenInput={selectedToken} />
 {/if}

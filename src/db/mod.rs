@@ -10,7 +10,7 @@ use async_graphql::{
 };
 use entities::Entity;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use tokens::{create_token, delete_token, tokens, Token};
+use tokens::{create_token, update_token, delete_token, tokens, Token, TokenInput};
 
 pub async fn build_pool(url: &str) -> SqlitePool {
     SqlitePoolOptions::new()
@@ -48,7 +48,7 @@ impl QueryRoot {
     }
 
     /// "My Albums" which have been xpozed, keeping the original Photos sorting
-    async fn my_albums(&self, ctx: &Context<'_>, page: i32) -> Result<Vec<Album>> {
+    async fn my_albums(&self, ctx: &Context<'_>, page: Option<i32>) -> Result<Vec<Album>> {
         my_albums(
             &ctx.data::<Databases>()?.photos,
             ctx.data::<Vec<Entity>>()?,
@@ -81,19 +81,33 @@ impl MutationRoot {
     async fn create_token(
         &self,
         ctx: &Context<'_>,
-        name: Option<String>,
-        session_bound: bool,
-        admin: bool,
-        whitelist: Option<String>,
+        input: TokenInput,
     ) -> Result<Option<Token>> {
         let token = ctx.data::<Token>()?;
         if token.admin {
             create_token(
                 &ctx.data::<Databases>()?.app,
-                name,
-                session_bound,
-                admin,
-                whitelist,
+                input
+            )
+            .await
+            .map_err(Error::from)
+        } else {
+            Err(Error::new("Unauthorised").extend_with(|_, e| e.set("code", 401)))
+        }
+    }
+
+    async fn update_token(
+        &self,
+        ctx: &Context<'_>,
+        id: String,
+        input: TokenInput,
+    ) -> Result<Option<Token>> {
+        let token = ctx.data::<Token>()?;
+        if token.admin {
+            update_token(
+                &ctx.data::<Databases>()?.app,
+                &id,
+                input
             )
             .await
             .map_err(Error::from)

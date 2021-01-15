@@ -13,6 +13,15 @@ export const getMyAlbums = `
   }
 `;
 
+export const getMyAlbumsForAccess = `
+  query {
+    myAlbums {
+      id
+      title
+    }
+  }
+`;
+
 export const getAlbum = `
   query($id: String!, $offset: Int!, $limit: Int!) {
     album(id: $id) {
