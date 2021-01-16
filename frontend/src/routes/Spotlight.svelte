@@ -473,8 +473,6 @@
       y: Math.min(Math.abs(e.detail.velocityY), 1.3) * 12 * Math.sign(e.detail.velocityY),
     }
 
-    console.log(e.detail);
-
     const deltaX = panDelta.x + currentMoveDelta.x;
     const deltaY = panDelta.y + currentMoveDelta.y;
 

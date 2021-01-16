@@ -46,7 +46,6 @@
   }
 
   $: tokenInput.albumIds = whitelist ? originalAlbumIds || [] : null;
-  $: console.log(tokenInput);
 
 </script>
 
