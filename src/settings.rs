@@ -59,7 +59,7 @@ impl Photos {
     }
 
     pub fn database_url(&self) -> String {
-        format!("sqlite://{}", tilde(&self.database))
+        format!("sqlite://{}?mode=ro", tilde(&self.database))
     }
 }
 
