@@ -310,6 +310,8 @@
   $: panThresholdForClose = viewportHeight / 6;
 
   function next() {
+    if (!hasNext) return;
+
     swipes -= 1;
     moveX = swipes * (viewportWidth + spacing);
     if (swipes % 3 == 1 || swipes % 3 == -2) {
@@ -331,6 +333,8 @@
   }
 
   function prev() {
+    if (!hasPrev) return;
+
     swipes += 1;
     moveX = swipes * (viewportWidth + spacing);
     if (swipes % 3 == 1 || swipes % 3 == -2) {
