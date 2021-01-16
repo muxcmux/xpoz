@@ -12,3 +12,4 @@ node_modules
 *.sqlite-wal
 .vscode
 /cert
+deploy.sh
