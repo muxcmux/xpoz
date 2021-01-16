@@ -92,10 +92,16 @@ where
     }
 }
 
+const NO_AUTH_PATHS: [&str; 3] = [
+    "/auth",
+    "/robots.txt",
+    "/share.html"
+];
+
 async fn authenticate(path: Option<&str>, session: &Session, pool: &SqlitePool) -> Option<Token> {
     match path {
         Some(p) => {
-            if p == "/auth" {
+            if NO_AUTH_PATHS.contains(&p) {
                 return Some(Token::anonymous());
             }
             authenticate_user(session, pool).await

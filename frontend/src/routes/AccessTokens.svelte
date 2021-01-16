@@ -123,7 +123,7 @@ ul {
     let token = e.detail.token;
     clearTimeout(copyTimeout);
     let input = document.getElementById('token-link') as HTMLInputElement;
-    let link = `${document.location.origin}/auth?${token.id}`;
+    let link = `${document.location.origin}/share.html?${token.id}`;
     input.value = link;
     input.select();
     document.execCommand('copy');
