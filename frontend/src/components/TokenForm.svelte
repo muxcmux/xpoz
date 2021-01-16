@@ -64,7 +64,6 @@
           {id ? "Save" : "Create"}
         </a>
       </h1>
-      <h2>&nbsp;</h2>
     </header>
 
     <ul>
@@ -110,6 +109,15 @@
   max-width: 40em;
   width: 100vw;
   z-index: 999;
+
+  header {
+    margin-bottom: 2em;
+    border-bottom: none;
+
+    span {
+      text-align: center;
+    }
+  }
 }
 
 .backdrop {
@@ -217,6 +225,17 @@ ul {
         width: 24px;
         background: white;
         transition: transform .25s ease;
+      }
+    }
+  }
+}
+
+@media screen and (min-width: 30em) {
+  .popup {
+    header {
+      a {
+        width: auto;
+        height: auto;
       }
     }
   }

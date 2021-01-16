@@ -61,9 +61,14 @@
       margin: 1em;
 
       h1 {
+        display: flex;
         font-size: 1.5em;
 
-        span { text-align: left }
+        span {
+          text-align: left;
+          padding: 0 .8em;
+          flex: 1;
+        }
 
         a {
           width: 1em;
