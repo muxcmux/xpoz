@@ -2,6 +2,7 @@ mod auth;
 mod db;
 mod services;
 mod settings;
+mod transcoder;
 
 use actix_session::CookieSession;
 use actix_web::middleware::{Compress, DefaultHeaders, Logger};
@@ -17,6 +18,8 @@ use db::{
 };
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use settings::{load_settings, Settings};
+use transcoder::Transcoder;
+use std::sync::Arc;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -24,6 +27,16 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     let cfg = configure().await;
+
+    let config = Arc::new(cfg.0.clone());
+
+    if cfg.0.media.convert_videos {
+        std::thread::spawn(move || Transcoder::new(config) );
+    }
+
+    // This is blocking the main thread and unblocks on SIGINT
+    // so there's no need to join the transcoder thread, since we
+    // want it to stop when the server is stopped
     run(cfg.0, cfg.1, cfg.2).await?;
 
     Ok(())

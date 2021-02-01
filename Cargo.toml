@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 actix-web = { version = "3", features = ["openssl"] }
+notify = "4"
 openssl = { version = "0.10", features = ["vendored"] }
 actix-service = "1.0.6"
 actix-files = "0.5"
@@ -29,3 +30,4 @@ sqlx = { version = "0.4", default-features = true, features = ["sqlite", "runtim
 sql-builder = "3"
 rusqlite = "0.24"
 refinery = { version = "0.5", features = ["rusqlite"] }
+walkdir = "2"

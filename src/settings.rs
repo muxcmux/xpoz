@@ -28,6 +28,13 @@ pub struct App {
     pub database: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct Media {
+    pub convert_videos: bool,
+    pub ffmpeg_executable: String,
+    pub videos_path: String,
+}
+
 impl App {
     pub fn database_url(&self) -> String {
         format!("sqlite://{}", tilde(&self.database))
@@ -68,6 +75,7 @@ pub struct Settings {
     pub photos: Photos,
     pub server: Server,
     pub app: App,
+    pub media: Media,
 }
 
 fn set_defaults(config: &mut Config) {
@@ -88,6 +96,9 @@ fn set_defaults(config: &mut Config) {
         ["photos.resized", "resources/derivatives"],
         ["photos.thumbs", "resources/derivatives/masters"],
         ["app.database", "xpoz.sqlite"],
+        ["media.convert_videos", "true"],
+        ["media.ffmpeg_executable", "echo"],
+        ["media.videos_path", "./videos"],
     ];
 
     for s in defaults.iter() {
