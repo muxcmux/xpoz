@@ -18,8 +18,8 @@ use db::{
 };
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use settings::{load_settings, Settings};
-use transcoder::Transcoder;
 use std::sync::Arc;
+use transcoder::Transcoder;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     let config = Arc::new(cfg.0.clone());
 
     if cfg.0.media.convert_videos {
-        std::thread::spawn(move || Transcoder::new(config) );
+        std::thread::spawn(move || Transcoder::new(config));
     }
 
     // This is blocking the main thread and unblocks on SIGINT
@@ -66,7 +66,7 @@ async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> R
         .finish();
     let server = HttpServer::new(move || {
         let session = CookieSession::signed(&[0; 32])
-            .secure(false)
+            .secure(settings.server.ssl)
             .expires_in(365 * 24 * 60 * 60);
         App::new()
             .data(settings.clone())
@@ -84,7 +84,7 @@ async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> R
             )
             .configure(services::graphql::config)
             .service(
-                actix_files::Files::new("/", &settings.server.public_dir).index_file("index.html"),
+                actix_files::Files::new("/", &settings.server.public_dir).index_file(&settings.server.index_file),
             )
     });
 

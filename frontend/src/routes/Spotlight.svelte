@@ -164,6 +164,7 @@
   import { operationStore, query } from "@urql/svelte";
   import { onDestroy } from "svelte";
   import ImageLoader from "../components/ImageLoader.svelte";
+  import VideoPlayer from "../components/VideoPlayer.svelte";
   import touch from "../use/touch";
   import { Gallery } from "../lib/gallery";
   import { CarouselItem } from "../lib/carousel";
@@ -402,6 +403,8 @@
   }
 
   function zoom(e: CustomEvent) {
+    if (carousel[current].item?.asset.isVideo) return;
+
     zooming = !zooming;
     assetAnimatedTransition = true;
     panDelta = { x: 0, y: 0 };
@@ -571,7 +574,11 @@
                       top: {c.top}px;
                       transform: translate3d({c.x}px, {c.y}px, 0px) scale({c.scale})">
 
-            <ImageLoader id={c.item.id} variant="resized" alt={c.item.id} />
+            {#if c.item.asset.isVideo}
+              <VideoPlayer id={c.item.id} paused={carousel[current].item?.id != c.item.id} />
+            {:else}
+              <ImageLoader id={c.item.id} variant="resized" alt={c.item.id} />
+            {/if}
           </div>
         {/if}
       {/each}

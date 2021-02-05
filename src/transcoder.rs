@@ -1,11 +1,11 @@
+use crate::settings::Settings;
 use notify::DebouncedEvent;
 use notify::{watcher, RecursiveMode, Watcher};
+use std::process::Command;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use walkdir::WalkDir;
-use std::process::Command;
-use crate::settings::Settings;
 
 struct Job {
     path: std::path::PathBuf,
@@ -19,15 +19,28 @@ impl Job {
 
     pub fn transcode(&self) {
         log::debug!("Executing job {:?}", &self.path);
-        if let Ok(mut c) = Command::new(&self.config.media.ffmpeg_executable).arg("2").spawn() {
-            log::debug!("Job command exited with {:?}", c.wait());
+        let mut output = std::path::PathBuf::from(&self.config.media.videos_path);
+        let filename = self.path.file_name().unwrap().to_owned();
+        let fnstring = filename.into_string().unwrap();
+        let uuid = fnstring.split(".").next().unwrap();
+        let mp4 = [uuid, "mp4"];
+        output.push(mp4.join("."));
+
+        if let Ok(mut child) = Command::new(&self.config.media.ffmpeg_executable)
+            .arg("-i")
+            .arg(&self.path)
+            .arg(&output)
+            .spawn()
+        {
+            let status = child.wait();
+            log::debug!("Job command exited with {:?}", status);
         }
     }
 }
 
 struct Worker {
-    id: usize,
-    thread: std::thread::JoinHandle<()>,
+    _id: usize,
+    _thread: std::thread::JoinHandle<()>,
 }
 
 impl Worker {
@@ -42,32 +55,40 @@ impl Worker {
             job.transcode();
             log::debug!("Worker {} finished job {:?}", id, job.path);
         });
-        Worker { id, thread }
+        Worker {
+            _id: id,
+            _thread: thread,
+        }
     }
 }
 
 pub struct Transcoder {
     config: Arc<Settings>,
-    workers: Vec<Worker>,
+    _workers: Vec<Worker>,
     sender: Sender<Job>,
 }
 
 impl Transcoder {
     pub fn new(config: Arc<Settings>) -> Self {
+        assert!(
+            config.media.workers < 25,
+            "Can't spawn more than 24 ffmpeg workers"
+        );
+
         let (sender, receiver) = channel();
 
         let receiver = Arc::new(Mutex::new(receiver));
 
-        let mut workers = Vec::with_capacity(4);
+        let mut workers = Vec::with_capacity(config.media.workers);
 
-        for id in 0..2 {
+        for id in 0..config.media.workers {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
         let tc = Self {
             config,
             sender,
-            workers,
+            _workers: workers,
         };
 
         tc.transcode();
@@ -114,20 +135,6 @@ impl Transcoder {
     fn scan(&self) {
         let mut transcoded = vec![];
 
-        for entry in WalkDir::new(self.config.photos.originals_dir()) {
-            if let Ok(v) = entry {
-                let ft = v.file_type();
-                if ft.is_dir() || ft.is_symlink() {
-                    continue;
-                }
-
-                if is_video(v.file_name()) {
-                    let filename = v.file_name().to_owned();
-                    transcoded.push(filename);
-                }
-            }
-        }
-
         for entry in WalkDir::new(&self.config.media.videos_path) {
             if let Ok(v) = entry {
                 let ft = v.file_type();
@@ -137,7 +144,22 @@ impl Transcoder {
 
                 if is_video(v.file_name()) {
                     let filename = v.file_name().to_owned();
-                    if !transcoded.contains(&filename) {
+                    let fnstring = filename.into_string().unwrap();
+                    transcoded.push(fnstring.split(".").next().unwrap().to_owned());
+                }
+            }
+        }
+
+        for entry in WalkDir::new(&self.config.photos.originals_dir()) {
+            if let Ok(v) = entry {
+                let ft = v.file_type();
+                if ft.is_dir() || ft.is_symlink() {
+                    continue;
+                }
+
+                if is_video(v.file_name()) {
+                    let filename = v.file_name().to_owned().into_string().unwrap();
+                    if !transcoded.contains(&filename.split(".").next().unwrap().to_owned()) {
                         let path = v.path().to_owned();
                         log::debug!("Sending transcoding job: {:?}", &path);
                         let _ = self.sender.send(Job::new(path, Arc::clone(&self.config)));
@@ -150,7 +172,10 @@ impl Transcoder {
 
 fn is_video(filename: &std::ffi::OsStr) -> bool {
     if let Some(v) = filename.to_str() {
-        return v.ends_with(".txt") || v.ends_with(".text");
+        return v.ends_with(".mp4")
+            || v.ends_with(".MP4")
+            || v.ends_with(".mov")
+            || v.ends_with(".MOV");
     }
 
     false

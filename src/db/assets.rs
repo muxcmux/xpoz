@@ -61,10 +61,9 @@ impl Asset {
     /// Returns the original file for the asset
     pub fn original(&self, settings: &Settings) -> Result<fs::NamedFile> {
         let mut dir = settings.photos.originals_dir();
-        dir.push(self.directory.clone());
-        dir.push(self.filename.clone());
-        let file = fs::NamedFile::open(dir)?;
-        Ok(file)
+        dir.push(&self.directory);
+        dir.push(&self.filename);
+        Ok(fs::NamedFile::open(dir)?)
     }
 
     /// Returns the first found resized variant of the asset with latest edits
@@ -85,6 +84,13 @@ impl Asset {
         self.first_in_path(&mut path)
     }
 
+    /// Returns the transcoded video for the asset
+    pub fn video(&self, settings: &Settings) -> Result<fs::NamedFile> {
+        let mut path = std::path::PathBuf::from(&settings.media.videos_path);
+        path.push([&self.uuid, "mp4"].join("."));
+        Ok(fs::NamedFile::open(path)?)
+    }
+
     fn first_in_path(&self, path: &mut PathBuf) -> Result<fs::NamedFile> {
         let extensions = ["jpeg", "mov", "mp4", "jpg", "png", "gif"];
 
@@ -94,7 +100,7 @@ impl Asset {
             require_literal_leading_dot: false,
         };
 
-        path.push(self.directory.clone());
+        path.push(&self.directory);
 
         let dir = path.to_str().expect("Failed converting a path to a string");
 

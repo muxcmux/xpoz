@@ -7,6 +7,7 @@ use std::env::args;
 pub struct Server {
     pub address: String,
     pub public_dir: String,
+    pub index_file: String,
     pub graphiql: bool,
     pub ssl: bool,
     pub cert: String,
@@ -33,6 +34,7 @@ pub struct Media {
     pub convert_videos: bool,
     pub ffmpeg_executable: String,
     pub videos_path: String,
+    pub workers: usize,
 }
 
 impl App {
@@ -82,6 +84,7 @@ fn set_defaults(config: &mut Config) {
     let defaults = [
         ["server.address", "0.0.0.0:1234"],
         ["server.public_dir", "./public"],
+        ["server.index_file", "index.html"],
         ["server.graphiql", "true"],
         ["server.ssl", "false"],
         ["server.key", "cert/key.pem"],
@@ -96,8 +99,9 @@ fn set_defaults(config: &mut Config) {
         ["photos.resized", "resources/derivatives"],
         ["photos.thumbs", "resources/derivatives/masters"],
         ["app.database", "xpoz.sqlite"],
-        ["media.convert_videos", "true"],
-        ["media.ffmpeg_executable", "echo"],
+        ["media.convert_videos", "false"],
+        ["media.ffmpeg_executable", "ffmpeg"],
+        ["media.workers", "4"],
         ["media.videos_path", "./videos"],
     ];
 
