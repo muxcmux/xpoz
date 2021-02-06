@@ -9,16 +9,17 @@ use async_graphql::{
     Context, EmptySubscription, Error, ErrorExtensions, Object, Result, Schema as AGSchema,
 };
 use entities::Entity;
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqlitePool, SqliteConnectOptions, SqlitePoolOptions};
 use tokens::{create_token, update_token, delete_token, tokens, Token, TokenInput};
 
-pub async fn build_pool(url: &str) -> SqlitePool {
+pub async fn build_pool(options: SqliteConnectOptions) -> SqlitePool {
+    log::debug!("Conn settings: {:?}", &options);
     SqlitePoolOptions::new()
         .idle_timeout(std::time::Duration::new(5, 0))
         .max_connections(3)
-        .connect(url)
+        .connect_with(options)
         .await
-        .expect(&format!("Can't open database {}", url))
+        .expect("Can't open database")
 }
 
 pub fn bool_to_insert_string(value: bool) -> String {

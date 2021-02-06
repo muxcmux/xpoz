@@ -39,7 +39,7 @@ pub struct Media {
 
 impl App {
     pub fn database_url(&self) -> String {
-        format!("sqlite://{}", tilde(&self.database))
+        format!("{}", tilde(&self.database))
     }
 }
 
@@ -68,7 +68,7 @@ impl Photos {
     }
 
     pub fn database_url(&self) -> String {
-        format!("sqlite://{}?mode=ro", tilde(&self.database))
+        format!("{}", tilde(&self.database))
     }
 }
 

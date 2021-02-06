@@ -18,6 +18,7 @@ use db::{
 };
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use settings::{load_settings, Settings};
+use sqlx::sqlite::{SqliteSynchronous, SqliteJournalMode, SqliteConnectOptions};
 use std::sync::Arc;
 use transcoder::Transcoder;
 
@@ -45,16 +46,29 @@ async fn main() -> Result<()> {
 async fn configure() -> (Settings, Databases, Vec<Entity>) {
     let settings = load_settings();
     log::debug!("{:?}", settings);
+
     migrate_database(&settings.app.database);
-    let photos_pool = build_pool(&settings.photos.database_url()).await;
-    let app_pool = build_pool(&settings.app.database_url()).await;
+
+    let app_opts = SqliteConnectOptions::default()
+        .filename(&settings.app.database_url());
+    let app_pool = build_pool(app_opts).await;
+
+    let photos_opts = SqliteConnectOptions::default()
+        .filename(&settings.photos.database_url())
+        .read_only(true)
+        // .journal_mode(SqliteJournalMode::Off)
+        .synchronous(SqliteSynchronous::Off);
+    let photos_pool = build_pool(photos_opts).await;
+
     let entities = entities(&photos_pool)
         .await
         .expect("Can't load entities from db");
+
     let dbs = Databases {
         photos: photos_pool,
         app: app_pool,
     };
+
     (settings, dbs, entities)
 }
 
@@ -84,7 +98,8 @@ async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> R
             )
             .configure(services::graphql::config)
             .service(
-                actix_files::Files::new("/", &settings.server.public_dir).index_file(&settings.server.index_file),
+                actix_files::Files::new("/", &settings.server.public_dir)
+                    .index_file(&settings.server.index_file),
             )
     });
 
