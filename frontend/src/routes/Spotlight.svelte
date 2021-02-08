@@ -568,21 +568,21 @@
     <div class="assets {panning ? 'no-transition' : ''}"
          style="transform: translate3d({moveX}px, {moveY}px, 0px); opacity: {opacity}">
       {#each Object.entries(carousel) as [_, c]}
-        {#if c.item}
-          <div class="asset" class:assetAnimatedTransition
-              style="width: {c.width}px;
-                      height: {c.height}px;
-                      left: {c.left}px;
-                      top: {c.top}px;
-                      transform: translate3d({c.x}px, {c.y}px, 0px) scale({c.scale})">
+        <div class="asset" class:assetAnimatedTransition
+             style="width: {c.width}px;
+                    height: {c.height}px;
+                    left: {c.left}px;
+                    top: {c.top}px;
+                    transform: translate3d({c.x}px, {c.y}px, 0px) scale({c.scale})">
 
+          {#if c.item}
             {#if c.item.asset.isVideo}
               <VideoPlayer id={c.item.id} paused={carousel[current].item?.id != c.item.id} />
             {:else}
               <ImageLoader id={c.item.id} variant="resized" alt={c.item.id} />
             {/if}
-          </div>
-        {/if}
+          {/if}
+        </div>
       {/each}
     </div>
   </div>
@@ -596,7 +596,7 @@
 
     <!-- <ul>
       {#each gallery.items as item}
-        <li class="{itemInSpotlight?.item?.id == item.id ? 'selected' : ''}" in:scale>
+        <li class="{carousel[current].item?.id == item.id ? 'selected' : ''}" in:scale>
           <ImageLoader id={item.id} variant="thumb" alt={item.id} />
         </li>
       {/each}
