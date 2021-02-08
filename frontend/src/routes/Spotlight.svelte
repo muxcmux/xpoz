@@ -186,11 +186,13 @@
   let lastPage = Math.floor((album.photosCount + album.videosCount) / perPage);
   let gallery = new Gallery<Asset>();
   let current: string = "second";
+
   const seeded = {
     first: false,
     second: false,
     third: false,
   }
+
   const carousel: {[key: string]: CarouselItem} = {
     first: new CarouselItem(-1),
     second: new CarouselItem(0),
@@ -241,7 +243,7 @@
         seeded.first = true;
       }
 
-      // seeding the third item did't with the first page
+      // seeding the third item did't work with the first page
       if (!seeded.third && index < album.photosCount + album.videosCount - 1 && gallery.size() > perPage) {
         carousel.third = carousel.third.setItem(gallery.items[cursor + 1]);
         seeded.third = true;
@@ -256,8 +258,8 @@
   $: hasPrev   = index > 0;
   $: hasNext   = index < album.photosCount + album.videosCount - 1;
 
-  $: if (!$req.fetching && currentPageIndex >= perPage - 3) loadNextPage()
-  $: if (!$req.fetching && currentPageIndex <= 2) loadPrevPage()
+  $: if (!$req.fetching && currentPageIndex >= perPage - 4) loadNextPage()
+  $: if (!$req.fetching && currentPageIndex <= 3) loadPrevPage()
 
   function loadPrevPage() {
     dir = InsertPosition.Left;
