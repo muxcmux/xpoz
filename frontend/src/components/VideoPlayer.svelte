@@ -121,8 +121,9 @@
     bind:this={video}
     playsinline
     preload
-    poster="/asset/thumb/{id}"
-    src="/asset/video/{id}">
+    poster="/asset/thumb/{id}">
+    <source src="/asset/video/{id}"/>
+    <source src="/asset/original/{id}"/>
   </video>
 
   {#if !playing || buffering}
