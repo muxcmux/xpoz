@@ -5,6 +5,10 @@ An API and a web gallery/viewer for your Apple's Photos.app albums.
 I wrote a [blog post](https://www.tonkata.com/posts/apple-photos/)
 explaining how some of that stuff works a while back.
 
+It looks like this:
+
+![xpoz demo](xpoz-demo.gif?raw=true)
+
 ## Requirements
 
   1. A Photos.app >= 6.0 library
