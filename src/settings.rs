@@ -33,6 +33,7 @@ pub struct App {
 pub struct Media {
     pub convert_videos: bool,
     pub ffmpeg_executable: String,
+    pub ffmpeg_arguments: String,
     pub videos_path: String,
     pub workers: usize,
 }
@@ -101,6 +102,7 @@ fn set_defaults(config: &mut Config) {
         ["app.database", "xpoz.sqlite"],
         ["media.convert_videos", "false"],
         ["media.ffmpeg_executable", "ffmpeg"],
+        ["media.ffmpeg_arguments", "-crf 34"],
         ["media.workers", "4"],
         ["media.videos_path", "./videos"],
     ];

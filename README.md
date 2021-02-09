@@ -72,6 +72,7 @@ media:
   # you need to have ffmpeg installed with appropriate codecs if you enable
   # video transcoding
   ffmpeg_executable: ffmpeg
+  ffmpeg_arguments: "-crf 34"
   workers: 4
   videos_path: ./videos
 ```

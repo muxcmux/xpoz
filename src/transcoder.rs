@@ -28,11 +28,15 @@ impl Job {
 
         tmp.push(mp4.join("."));
 
-        if let Ok(mut child) = Command::new(&self.config.media.ffmpeg_executable)
-            .arg("-i")
-            .arg(&self.path)
-            .arg(&tmp)
-            .spawn()
+        let mut cmd = Command::new(&self.config.media.ffmpeg_executable);
+        cmd.arg("-i");
+        cmd.arg(&self.path);
+        for arg in self.config.media.ffmpeg_arguments.split(" ") {
+            cmd.arg(arg);
+        }
+        cmd.arg(&tmp);
+
+        if let Ok(mut child) = cmd.spawn()
         {
             let status = child.wait();
             log::debug!("Transcoding finished with {:?}", status);
