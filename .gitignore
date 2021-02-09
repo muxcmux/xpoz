@@ -7,6 +7,7 @@ web_modules
 node_modules
 /public
 /videos
+/releases
 .env
 *.sqlite
 *.sqlite-shm
