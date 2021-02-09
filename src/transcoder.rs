@@ -19,21 +19,29 @@ impl Job {
 
     pub fn transcode(&self) {
         log::debug!("Executing job {:?}", &self.path);
-        let mut output = std::path::PathBuf::from(&self.config.media.videos_path);
+
+        let mut tmp = std::env::temp_dir();
         let filename = self.path.file_name().unwrap().to_owned();
         let fnstring = filename.into_string().unwrap();
         let uuid = fnstring.split(".").next().unwrap();
         let mp4 = [uuid, "mp4"];
-        output.push(mp4.join("."));
+
+        tmp.push(mp4.join("."));
 
         if let Ok(mut child) = Command::new(&self.config.media.ffmpeg_executable)
             .arg("-i")
             .arg(&self.path)
-            .arg(&output)
+            .arg(&tmp)
             .spawn()
         {
             let status = child.wait();
-            log::debug!("Job command exited with {:?}", status);
+            log::debug!("Transcoding finished with {:?}", status);
+
+            if status.is_ok() && status.unwrap().success() {
+                let mut output = std::path::PathBuf::from(&self.config.media.videos_path);
+                output.push(mp4.join("."));
+                let _ = std::fs::rename(&tmp, &output);
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ build
 web_modules
 node_modules
 /public
+/videos
 .env
 *.sqlite
 *.sqlite-shm
