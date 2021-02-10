@@ -1,4 +1,4 @@
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, Environment, File, FileFormat};
 use serde::Deserialize;
 use shellexpand::tilde;
 use std::env::args;
@@ -33,7 +33,7 @@ pub struct App {
 pub struct Media {
     pub transcode_videos: bool,
     pub ffmpeg_executable: String,
-    pub ffmpeg_arguments: String,
+    pub ffmpeg_arguments: Vec<String>,
     pub videos_path: String,
     pub workers: usize,
 }
@@ -81,41 +81,11 @@ pub struct Settings {
     pub media: Media,
 }
 
-fn set_defaults(config: &mut Config) {
-    let defaults = [
-        ["server.address", "0.0.0.0:1234"],
-        ["server.public_dir", "./public"],
-        ["server.index_file", "index.html"],
-        ["server.graphiql", "true"],
-        ["server.ssl", "false"],
-        ["server.key", "cert/key.pem"],
-        ["server.cert", "cert/cert.pem"],
-        ["photos.library", "~/Pictures/Photos Library.photoslibrary"],
-        [
-            "photos.database",
-            "~/Pictures/Photos Library.photoslibrary/database/Photos.sqlite",
-        ],
-        ["photos.originals", "originals"],
-        ["photos.renders", "resources/renders"],
-        ["photos.resized", "resources/derivatives"],
-        ["photos.thumbs", "resources/derivatives/masters"],
-        ["app.database", "xpoz.sqlite"],
-        ["media.transcode_videos", "false"],
-        ["media.ffmpeg_executable", "ffmpeg"],
-        ["media.ffmpeg_arguments", "-crf 34"],
-        ["media.workers", "4"],
-        ["media.videos_path", "./videos"],
-    ];
-
-    for s in defaults.iter() {
-        config.set_default(s[0], s[1]).expect("Config error");
-    }
-}
-
 impl Settings {
     pub fn from_file(filename: &str) -> Result<Self, ConfigError> {
+        let default = String::from_utf8_lossy(include_bytes!("default_config.yml"));
         let mut config = Config::new();
-        set_defaults(&mut config);
+        config.merge(File::from_str(&default, FileFormat::Yaml))?;
         config.merge(File::with_name(filename).required(false))?;
         config.merge(Environment::with_prefix("XPOZ").separator("__"))?;
         config.try_into()

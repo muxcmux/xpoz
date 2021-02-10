@@ -31,7 +31,7 @@ impl Job {
         let mut cmd = Command::new(&self.config.media.ffmpeg_executable);
         cmd.arg("-i");
         cmd.arg(&self.path);
-        for arg in self.config.media.ffmpeg_arguments.split(" ") {
+        for arg in self.config.media.ffmpeg_arguments.iter() {
             cmd.arg(arg);
         }
         cmd.arg(&tmp);
