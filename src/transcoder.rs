@@ -20,33 +20,60 @@ impl Job {
     pub fn transcode(&self) {
         log::debug!("Executing job {:?}", &self.path);
 
+        let mp4 = self.mp4();
+
         let mut tmp = std::env::temp_dir();
-        let filename = self.path.file_name().unwrap().to_owned();
-        let fnstring = filename.into_string().unwrap();
-        let uuid = fnstring.split(".").next().unwrap();
-        let mp4 = [uuid, "mp4"];
+        tmp.push(&mp4);
 
-        tmp.push(mp4.join("."));
-
-        let mut cmd = Command::new(&self.config.media.ffmpeg_executable);
+        let mut cmd = Command::new(&self.config.media.ffmpeg.bin);
         cmd.arg("-i");
         cmd.arg(&self.path);
-        for arg in self.config.media.ffmpeg_arguments.iter() {
-            cmd.arg(arg);
+
+        if self.is_hdr() {
+            cmd.args(&self.config.media.ffmpeg.hdr);
+        } else {
+            cmd.args(&self.config.media.ffmpeg.sdr);
         }
+
         cmd.arg(&tmp);
 
-        if let Ok(mut child) = cmd.spawn()
-        {
+        if let Ok(mut child) = cmd.spawn() {
             let status = child.wait();
             log::debug!("Transcoding finished with {:?}", status);
 
             if status.is_ok() && status.unwrap().success() {
                 let mut output = std::path::PathBuf::from(&self.config.media.videos_path);
-                output.push(mp4.join("."));
+                output.push(&mp4);
                 let _ = std::fs::rename(&tmp, &output);
             }
         }
+    }
+
+    fn mp4(&self) -> String {
+        let filename = self.path.file_name().unwrap().to_owned();
+        let fnstring = filename.into_string().unwrap();
+        let uuid = fnstring.split(".").next().unwrap();
+        [uuid, "mp4"].join(".")
+    }
+
+    fn is_hdr(&self) -> bool {
+        let mut probe = Command::new(&self.config.media.ffmpeg.probe);
+        probe.args(&[
+            "-show_entries",
+            "stream=color_space",
+            "-select_streams",
+            "v",
+            "-loglevel",
+            "panic",
+        ]);
+        probe.arg(&self.path);
+
+        if let Ok(out) = probe.output() {
+            let out = String::from_utf8_lossy(&out.stdout);
+            return out.lines().filter(|line| line.contains("bt2020")).count() > 0;
+        }
+
+        false
     }
 }
 

@@ -32,10 +32,17 @@ pub struct App {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Media {
     pub transcode_videos: bool,
-    pub ffmpeg_executable: String,
-    pub ffmpeg_arguments: Vec<String>,
-    pub videos_path: String,
+    pub ffmpeg: FFmpeg,
     pub workers: usize,
+    pub videos_path: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct FFmpeg {
+    pub bin: String,
+    pub probe: String,
+    pub sdr: Vec<String>,
+    pub hdr: Vec<String>,
 }
 
 impl App {
