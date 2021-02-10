@@ -27,3 +27,5 @@ rm -rf public/js/*.txt
 cd ..
 
 tar -czvf "$name.tar.gz" $name
+
+rm -rf "$name"

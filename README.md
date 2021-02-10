@@ -68,7 +68,7 @@ media:
   # Flip this to true to make transcoded copies of your videos which are
   # suitable for displaying in a browser (AAC/h.264 mp4)
   # (original videos are left intact)
-  convert_videos: false
+  transcode_videos: false
   # you need to have ffmpeg installed with appropriate codecs if you enable
   # video transcoding
   ffmpeg_executable: ffmpeg

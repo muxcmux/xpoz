@@ -18,7 +18,7 @@ use db::{
 };
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use settings::{load_settings, Settings};
-use sqlx::sqlite::{SqliteSynchronous, SqliteJournalMode, SqliteConnectOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteSynchronous};
 use std::sync::Arc;
 use transcoder::Transcoder;
 
@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
 
     let config = Arc::new(cfg.0.clone());
 
-    if cfg.0.media.convert_videos {
+    if cfg.0.media.transcode_videos {
         std::thread::spawn(move || Transcoder::new(config));
     }
 
@@ -49,14 +49,12 @@ async fn configure() -> (Settings, Databases, Vec<Entity>) {
 
     migrate_database(&settings.app.database);
 
-    let app_opts = SqliteConnectOptions::default()
-        .filename(&settings.app.database_url());
+    let app_opts = SqliteConnectOptions::default().filename(&settings.app.database_url());
     let app_pool = build_pool(app_opts).await;
 
     let photos_opts = SqliteConnectOptions::default()
         .filename(&settings.photos.database_url())
         .read_only(true)
-        // .journal_mode(SqliteJournalMode::Off)
         .synchronous(SqliteSynchronous::Off);
     let photos_pool = build_pool(photos_opts).await;
 
