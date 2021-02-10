@@ -25,57 +25,17 @@ Currently there are binaries for MacOS and Linux.
 
 If you are running on a Mac and you haven't changed the default location of the
 Photos library, then you shouldn't need any configuration. Otherwise, you have
-to tell xpoz where your Apple Photos library is located. You can provide
-configuration options in several different ways, but by default xpoz tries to
-read configuration from a `settings.yml` in the same directory as the
-executable. It is possible to pass a different config file as an argument, eg:
+to tell xpoz where your Apple Photos library is located.
 
-    $: ./xpoz my-config.yml
+You can provide configuration options in several different ways, but by default
+xpoz tries to read configuration from a `settings.yml` in the same directory as
+the executable. It is possible to pass a different config file as an argument:
 
-Here's the default configuration file. Most options should be self explanatory.
+    $ ./xpoz my-config.yml
 
-```yml
-server:
-  # toggles a graphql web api explorer at /api (disable for prod instances)
-  graphiql: true
-  address: 0.0.0.0:1234
-  # location of the frontend
-  public_dir: ./public
-  index_file: index.html
-
-  # if you want to serve photos via https, you need to set this to true + specify the paths to your cert and key
-  ssl: false
-  key: /path/to/your/key.pem
-  cert: /path/to/your/cert.pem
-
-# the following are the defaults and should work in most cases
-# but if you have different locations for the library and database
-# file, you need to set the appropriate paths to those 
-photos:
-  library: "~/Pictures/Photos Library.photoslibrary"
-  # don't worry this is opened in read only mode
-  database: "~/Pictures/Photos Library.photoslibrary/database/Photos.sqlite"
-  originals: originals
-  renders: resources/renders
-  resized: resources/derivatives
-  thumbs: resources/derivatives/masters
-
-# this database is used internally and is created automatically
-app:
-  database: xpoz.sqlite
-
-media:
-  # Flip this to true to make transcoded copies of your videos which are
-  # suitable for displaying in a browser (AAC/h.264 mp4)
-  # (original videos are left intact)
-  transcode_videos: false
-  # you need to have ffmpeg installed with appropriate codecs if you enable
-  # video transcoding
-  ffmpeg_executable: ffmpeg
-  ffmpeg_arguments: "-crf 34"
-  workers: 4
-  videos_path: ./videos
-```
+Please have a look at the [default configuration file](src/default_config.yml)
+as a reference for all available options. Any settings in your custom config
+file will overwrite these defaults.
 
 ## Run
 
@@ -91,6 +51,10 @@ You should now be able to browse you Apple Photos.app albums from a web browser
 
 To create sharable links, visit http://localhost:1234/#/access while
 authenticated as an admin.
+
+If you have `graphiql: true` in your config (the default) you can also visit the
+graphql playground and inspect the schema or just fire custom queries. This is
+availble at http://localhost:1234/api by default.
 
 ### Why tho?
 
