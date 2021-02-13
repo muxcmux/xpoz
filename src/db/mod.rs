@@ -9,8 +9,8 @@ use async_graphql::{
     Context, EmptySubscription, Error, ErrorExtensions, Object, Result, Schema as AGSchema,
 };
 use entities::Entity;
-use sqlx::sqlite::{SqlitePool, SqliteConnectOptions, SqlitePoolOptions};
-use tokens::{create_token, update_token, delete_token, tokens, Token, TokenInput};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use tokens::{create_token, delete_token, tokens, update_token, Token, TokenInput};
 
 pub async fn build_pool(options: SqliteConnectOptions) -> SqlitePool {
     log::debug!("Conn settings: {:?}", &options);
@@ -60,6 +60,12 @@ impl QueryRoot {
         .map_err(Error::from)
     }
 
+    /// Returns the current access token
+    async fn me(&self, ctx: &Context<'_>) -> Result<Token> {
+        let token_ref = ctx.data::<Token>()?;
+        Ok(token_ref.clone())
+    }
+
     // Admin resources
 
     /// Returns the available access tokens
@@ -79,19 +85,12 @@ pub struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn create_token(
-        &self,
-        ctx: &Context<'_>,
-        input: TokenInput,
-    ) -> Result<Option<Token>> {
+    async fn create_token(&self, ctx: &Context<'_>, input: TokenInput) -> Result<Option<Token>> {
         let token = ctx.data::<Token>()?;
         if token.admin {
-            create_token(
-                &ctx.data::<Databases>()?.app,
-                input
-            )
-            .await
-            .map_err(Error::from)
+            create_token(&ctx.data::<Databases>()?.app, input)
+                .await
+                .map_err(Error::from)
         } else {
             Err(Error::new("Unauthorised").extend_with(|_, e| e.set("code", 401)))
         }
@@ -105,13 +104,9 @@ impl MutationRoot {
     ) -> Result<Option<Token>> {
         let token = ctx.data::<Token>()?;
         if token.admin {
-            update_token(
-                &ctx.data::<Databases>()?.app,
-                &id,
-                input
-            )
-            .await
-            .map_err(Error::from)
+            update_token(&ctx.data::<Databases>()?.app, &id, input)
+                .await
+                .map_err(Error::from)
         } else {
             Err(Error::new("Unauthorised").extend_with(|_, e| e.set("code", 401)))
         }

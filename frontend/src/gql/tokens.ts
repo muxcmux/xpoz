@@ -15,6 +15,16 @@ export const getTokens = `
   }
 `;
 
+export const me = `
+  query {
+    me {
+      id
+      name
+      admin
+    }
+  }
+`
+
 export const createToken = `
   mutation($input: TokenInput!) {
     createToken(input: $input) {

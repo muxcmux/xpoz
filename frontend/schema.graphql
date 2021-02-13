@@ -49,6 +49,9 @@ type QueryRoot {
   # "My Albums" which have been xpozed, keeping the original Photos sorting
   myAlbums(page: Int): [Album!]!
 
+  # Returns the current access token
+  me: Token!
+
   # Returns the available access tokens
   tokens: [Token!]!
 }

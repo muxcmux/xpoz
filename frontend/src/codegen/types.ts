@@ -78,6 +78,7 @@ export type QueryRoot = {
   __typename?: 'QueryRoot';
   album?: Maybe<Album>;
   myAlbums: Array<Album>;
+  me: Token;
   tokens: Array<Token>;
 };
 

@@ -7,6 +7,25 @@
 
     a {
       position: relative;
+      text-decoration: none;
+
+      .sharing {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        > svg {
+          width: 3em;
+          height: 3em;
+          margin-bottom: .5em;
+        }
+      }
 
       figure {
         margin: 0;
@@ -87,6 +106,7 @@
   import { scale } from "svelte/transition";
   import { onMount, tick } from "svelte";
   import { getMyAlbums } from "../gql/albums";
+  import { me } from "../gql/tokens";
   import type { Album } from "../codegen/types";
   import { operationStore, query } from '@urql/svelte';
   import { Gallery } from "../lib/gallery";
@@ -97,7 +117,10 @@
   let gallery = new Gallery<Album>();
   let hasMore = true;
 
+  const meRequest = operationStore(me);
+
   query(request);
+  query(meRequest);
 
   const unsubscribe = request.subscribe(async value => {
     let fetched = value.data?.myAlbums as Album[];
@@ -135,6 +158,14 @@
 
 <section class="page">
   <div class="results">
+    {#if !$meRequest.fetching && $meRequest.data.me.admin}
+      <a href="/#/access" in:scale="{{ duration: 350}}">
+        <div class="sharing">
+          <svg><use xlink:href="#i-link"/></svg>
+          Sharing
+        </div>
+      </a>
+    {/if}
     {#each gallery.items as item (item.id)}
       <a href="/#/album/{item.asset.id}" in:scale="{{ duration: 350}}">
         <figure>
