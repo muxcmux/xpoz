@@ -24,6 +24,17 @@
       display: block;
       height: 100%;
     }
+
+    .duration {
+      color: white;
+      padding: 0.05em 0.25em;
+      font-size: .8em;
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      z-index: 4;
+      background: rgba(0, 0, 0, .3);
+    }
   }
 
   @media screen and (min-width: 30em) {
@@ -120,6 +131,13 @@
   function loadMore() {
     if (!$req.fetching && hasMore) $req.variables!.offset += perPage;
   }
+
+  function duration(seconds: number): string {
+    let min = Math.floor(seconds / 60);
+    let s = Math.floor(seconds) % 60;
+    let sec = s < 10 ? `0${s}` : s;
+    return `${min}:${sec}`;
+  }
 </script>
 
 {#if album && !gallery.isEmpty() && index >= 0}
@@ -150,6 +168,9 @@
         <figure in:scale="{{ duration: 350 }}">
           <a href="/#/album/{album.id}?{i}" use:fixtap on:tap={() => push(`/album/${album.id}?${i}`)}>
             <ImageLoader id={item.id} variant="thumb" />
+            {#if item.asset.isVideo}
+              <div class="duration">{duration(item.asset.duration)}</div>
+            {/if}
           </a>
         </figure>
       {/each}
