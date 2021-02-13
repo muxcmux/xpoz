@@ -107,6 +107,11 @@
   }
 
   $: controlsClass = buffering || ended || errored ? 'plain' : '';
+
+  $: if (id && video) {
+    video.pause();
+    video.load();
+  }
 </script>
 
 <div class="video">
@@ -120,7 +125,6 @@
     on:waiting={wait}
     bind:this={video}
     playsinline
-    preload
     poster="/asset/thumb/{id}">
     <source src="/asset/video/{id}"/>
     <source src="/asset/original/{id}"/>
