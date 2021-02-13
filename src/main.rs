@@ -97,7 +97,9 @@ async fn run(settings: Settings, dbs: Databases, entity_cache: Vec<Entity>) -> R
             .configure(services::graphql::config)
             .service(
                 actix_files::Files::new("/", &settings.server.public_dir)
-                    .index_file(&settings.server.index_file),
+                    .index_file(&settings.server.index_file)
+                    .use_etag(false)
+                    .use_last_modified(false)
             )
     });
 

@@ -21,7 +21,7 @@ async fn get_asset(
         };
 
         if let Ok(f) = file {
-            return Either::A(f);
+            return Either::A(f.use_etag(false).use_last_modified(false));
         }
     }
 
