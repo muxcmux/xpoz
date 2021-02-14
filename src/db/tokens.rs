@@ -17,6 +17,7 @@ pub struct TokenInput {
 }
 
 #[derive(sqlx::FromRow, Clone)]
+#[derive(Debug)]
 pub struct Token {
     name: String,
     session_bound: bool,

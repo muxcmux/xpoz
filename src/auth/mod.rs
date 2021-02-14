@@ -79,7 +79,7 @@ where
                 let _ = session.set("id", id);
             }
 
-            let token = authenticate(Some(&req.path()), &session, &dbs.app).await;
+            let token = authenticate(&req.path(), &session, &dbs.app).await;
 
             if let Some(a) = token {
                 req.head().extensions_mut().insert(a);
@@ -98,16 +98,11 @@ const NO_AUTH_PATHS: [&str; 3] = [
     "/share.html"
 ];
 
-async fn authenticate(path: Option<&str>, session: &Session, pool: &SqlitePool) -> Option<Token> {
-    match path {
-        Some(p) => {
-            if NO_AUTH_PATHS.contains(&p) {
-                return Some(Token::anonymous());
-            }
-            authenticate_user(session, pool).await
-        }
-        None => authenticate_user(session, pool).await,
+async fn authenticate(path: &str, session: &Session, pool: &SqlitePool) -> Option<Token> {
+    if NO_AUTH_PATHS.contains(&path) {
+        return Some(Token::anonymous());
     }
+    authenticate_user(session, pool).await
 }
 
 async fn authenticate_user(session: &Session, pool: &SqlitePool) -> Option<Token> {
