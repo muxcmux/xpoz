@@ -79,17 +79,20 @@
     playing = true;
     buffering = false;
     error = false;
+    ended = false;
   }
 
   function pause() {
     playing = false;
     buffering = false;
+    error = false;
     ended = false;
   }
 
   function end() {
     playing = false;
     buffering = false;
+    error = false;
     ended = true;
   }
 
@@ -111,6 +114,7 @@
   $: if (id && video) {
     video.pause();
     video.load();
+    ended = false;
   }
 </script>
 
