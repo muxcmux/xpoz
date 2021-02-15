@@ -26,8 +26,8 @@
     cursor: pointer;
 
     .icon {
-      width: 7em;
-      height: 7em;
+      width: 5em;
+      height: 5em;
       position: absolute;
       top: 50%;
       left: 50%;
@@ -37,9 +37,10 @@
       place-content: center;
 
       &.play {
-        border: none;
-        border: 3px solid rgba(255, 255, 255, .4);
-        border-radius: 3.5em;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        background: rgba(255, 255, 255, .2);
+        border-radius: 2.5em;
       }
 
       span {
@@ -47,8 +48,8 @@
       }
 
       svg {
-        width: 4em;
-        height: 4em;
+        width: 3em;
+        height: 3em;
         position: absolute;
         top: 50%;
         left: 50%;
@@ -56,6 +57,22 @@
         stroke-width: 2;
         fill: white;
       }
+    }
+  }
+
+  .progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: .2em;
+
+    .track {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: rgba(255,255,255,.7);
     }
   }
 </style>
@@ -72,6 +89,8 @@
   let ended = false;
   let errored = false;
   let buffering = false;
+
+  let progress = 0;
 
   $: if (paused && video) { video.pause() }
 
@@ -109,6 +128,10 @@
     buffering = true;
   }
 
+  function timeupdate() {
+    progress = video.currentTime / video.duration * 100;
+  }
+
   $: controlsClass = buffering || ended || errored ? 'plain' : '';
 
   $: if (id && video) {
@@ -127,12 +150,17 @@
     on:click={toggle}
     on:playing={play}
     on:waiting={wait}
+    on:timeupdate={timeupdate}
     bind:this={video}
     playsinline
     poster="/asset/thumb/{id}">
     <source src="/asset/video/{id}"/>
     <source src="/asset/original/{id}"/>
   </video>
+
+  <div class="progress">
+    <div class="track" style="width: {progress}%"></div>
+  </div>
 
   {#if !playing || buffering}
     <div class="controls" on:click={toggle} transition:fade={{ duration: 200 }}>
