@@ -35,13 +35,10 @@
       color: white;
       display: grid;
       place-content: center;
-
-      &.play {
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        background: rgba(255, 255, 255, .2);
-        border-radius: 2.5em;
-      }
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, .2);
+      border-radius: 2.5em;
 
       span {
         font-size: 4em;
@@ -164,10 +161,10 @@
 
   {#if !playing || buffering}
     <div class="controls" on:click={toggle} transition:fade={{ duration: 200 }}>
-      {#if errored}
-        <div class="icon"><span>😵</span></div>
-      {:else if buffering}
-        <div class="icon">
+      <div class="icon">
+        {#if errored}
+          <span>😵</span>
+        {:else if buffering}
           <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; background: transparent; display: block;" width="200px" height="200px" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
             <g transform="rotate(0 50 50)">
               <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#ffffff">
@@ -219,12 +216,10 @@
               </rect>
             </g>
           </svg>
-        </div>
-      {:else if ended}
-        <div class="icon"><svg><use xlink:href="#i-reload"/></svg></div>
-      {:else}
-        <div class="icon play"><svg><use xlink:href="#i-play"/></svg></div>
-      {/if}
+        {:else}
+          <svg><use xlink:href="#i-{ended ? 'reload' : 'play'}"/></svg>
+        {/if}
+      </div>
     </div>
   {/if}
 </div>
