@@ -153,6 +153,20 @@
     }
   }
 
+  .asset-info {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    text-align: center;
+    line-height: 1.3;
+    font-size: .9em;
+    padding: .4em;
+    background-color: rgba(0, 0, 0, .4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
 </style>
 
 <script lang="ts">
@@ -179,6 +193,8 @@
     Right,
     Left
   }
+
+  let showAssetInfo = false;
 
   let dir = (index % perPage) <= 1 ? InsertPosition.Left : InsertPosition.Right;
   let loadPage = Math.floor(index / perPage);
@@ -281,10 +297,7 @@
     if (e.key == "ArrowLeft") prev();
     if (e.key == "ArrowRight") next();
     if (e.key == "ArrowUp" || e.key == "Escape" || e.key == "ArrowDown") {
-      opacity = 0;
-      backdropOpacity = 0;
-      moveY = viewportHeight * (e.key == "ArrowDown" ? 1 : -1);
-      setTimeout(pop, 300);
+      close(e.key == "ArrowDown" ? 1 : -1);
     }
   }
 
@@ -311,6 +324,14 @@
   const timeThresholdForChange = 200;
   $: panThresholdForChange = viewportWidth / 5;
   $: panThresholdForClose = viewportHeight / 6;
+
+  function close(dir: 1 | -1) {
+    opacity = 0;
+    backdropOpacity = 0;
+    moveY = viewportHeight * dir;
+    showAssetInfo = false;
+    setTimeout(pop, 300);
+  }
 
   function next() {
     if (!hasNext) return;
@@ -376,10 +397,7 @@
       }
     } else {
       if (Math.abs(e.detail.deltaY) > panThresholdForClose || e.detail.deltaTime < timeThresholdForChange) {
-        opacity = 0;
-        backdropOpacity = 0;
-        moveY = viewportHeight * Math.sign(e.detail.deltaY);
-        setTimeout(pop, 300);
+        close(Math.sign(e.detail.deltaY));
       }
     }
     panning = null;
@@ -406,6 +424,8 @@
 
   function zoom(e: CustomEvent) {
     if (carousel[current].item?.asset.isVideo) return;
+
+    clearTimeout(singleTapTimeout);
 
     zooming = !zooming;
     assetAnimatedTransition = true;
@@ -555,6 +575,28 @@
   let panBounds: Bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
   let assetAnimatedTransition = false;
 
+  function date(str: string): string {
+    let d = str.split(' ')[0];
+    let date = new Date(d);
+    return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+  }
+
+  function time(str: string): string {
+    let time = str.split(' ')[1];
+    let parts = time.split(':');
+    return [parts[0], parts[1]].join(':');
+  }
+
+  let singleTapTimeout: number;
+
+  function toggleAssetInfo() {
+    if (carousel[current].item?.asset?.isVideo) {
+      showAssetInfo = false;
+    } else {
+      singleTapTimeout = setTimeout(() => showAssetInfo = !showAssetInfo, 250);
+    }
+  }
+
 </script>
 
 <svelte:window on:resize={onResize} on:keyup={keyboardNav} bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
@@ -564,7 +606,20 @@
        style="opacity: {backdropOpacity}"
        on:click={() => replace($location)}></div>
 
-  <div class="swiper" use:touch on:panmove={move} on:panstart={startMoving} on:panend={stopMoving} on:doubletap={zoom}>
+  {#if carousel[current].item?.asset && showAssetInfo}
+    <div class="asset-info" transition:fly={{ y: -50 }}>
+      <strong>{date(carousel[current].item?.asset.createdAt)}</strong><br>
+      {time(carousel[current].item?.asset.createdAt)}
+    </div>
+  {/if}
+
+  <div class="swiper"
+       use:touch
+       on:panmove={move}
+       on:panstart={startMoving}
+       on:panend={stopMoving}
+       on:doubletap={zoom}
+       on:singletap={toggleAssetInfo}>
     <div class="assets {panning ? 'no-transition' : ''}"
          style="transform: translate3d({moveX}px, {moveY}px, 0px); opacity: {opacity}">
       {#each Object.entries(carousel) as [_, c]}

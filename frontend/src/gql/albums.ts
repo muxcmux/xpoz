@@ -35,6 +35,7 @@ export const getAlbum = `
         height
         isVideo
         duration
+        createdAt
       }
     }
   }
