@@ -462,9 +462,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.38"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afddf7f520a80dbf76e6f50a35bca42a2331ef227a28b3b6dc5c2e2338d114b1"
+checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 
 [[package]]
 name = "arrayvec"
@@ -1945,9 +1945,9 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "4.0.16"
+version = "4.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2599080e87c9bd051ddb11b10074f4da7b1223298df65d4c2ec5bcf309af1533"
+checksum = "ae03c8c853dba7bfd23e571ff0cff7bc9dceb40a4cd684cd1681824183f45257"
 dependencies = [
  "bitflags",
  "filetime",
