@@ -26,7 +26,7 @@ config = "0.11"
 anyhow = "1"
 async-graphql = "2"
 async-graphql-actix-web = "2"
-sqlx = { version = "0.4", default-features = true, features = ["sqlite", "runtime-actix-native-tls"] }
+sqlx = { version = "0.5", default-features = true, features = ["sqlite", "runtime-actix-native-tls"] }
 sql-builder = "3"
 rusqlite = "0.24"
 refinery = { version = "0.5", features = ["rusqlite"] }
